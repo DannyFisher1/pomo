@@ -1,17 +1,12 @@
-//
-//  pomoApp.swift
-//  pomo
-//
-//  Created by Danny Fisher on 4/21/25.
-//
-
 import SwiftUI
 
 @main
-struct pomoApp: App {
+struct PomodoroTimerApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        Settings {
+            EmptyView()
         }
     }
 }
