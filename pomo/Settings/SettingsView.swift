@@ -185,6 +185,28 @@ struct SettingsView: View {
                             iconSettingRow(label: "Long Break Icon", iconBinding: $settings.longBreakIcon)
                         }
                     }
+                    
+                    // New Section for Custom Notification Settings
+                    section(title: "Custom Notifications") {
+                        VStack(spacing: 0) {
+                            sliderSettingRow(
+                                icon: "arrow.up.left.and.arrow.down.right", 
+                                label: "Size Scale", 
+                                value: $settings.notificationScale, 
+                                range: 0.7...2.0, // Example range
+                                step: 0.1, 
+                                specifier: "%.1fx"
+                            )
+                            sliderSettingRow(
+                                icon: "hourglass", 
+                                label: "Display Duration", 
+                                value: $settings.notificationDuration, 
+                                range: 2.0...10.0, // Example range
+                                step: 0.5, 
+                                specifier: "%.1f sec"
+                            )
+                        }
+                    }
                 }
                 .padding()
             }
@@ -284,6 +306,26 @@ struct SettingsView: View {
             Divider()
                 .padding(.leading, 40)
         }
+    }
+
+    // MARK: - Slider setting row
+    private func sliderSettingRow(icon: String, label: String, value: Binding<Double>, range: ClosedRange<Double>, step: Double, specifier: String) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Label(label, systemImage: icon)
+                Spacer()
+                // Format the value display
+                Text(String(format: specifier, value.wrappedValue))
+                    .frame(width: 70, alignment: .trailing)
+            }
+            Slider(value: value, in: range, step: step) {
+                // Accessibility label
+                Text(label)
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        // No divider for the last item in the section typically
     }
 }
 

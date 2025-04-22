@@ -3,7 +3,19 @@ import SwiftUI
 import UserNotifications
 
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    // Static reference to the AppDelegate instance
+    static private(set) var instance: AppDelegate!
+    
     var statusBarController: StatusBarController?
+    // Initialize settings immediately as a non-optional property
+    private(set) var settings = TimerSettings()
+    private var manager: PomodoroManager! 
+
+    override init() {
+        super.init()
+        // Set the static instance early in the init process
+        AppDelegate.instance = self
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Request notification permission
@@ -12,11 +24,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Set notification center delegate
         UNUserNotificationCenter.current().delegate = self
         
-        // Create settings first
-        let settings = TimerSettings()
-        // Inject settings into the manager
-        let manager = PomodoroManager(timerSettings: settings)
-
+        // Settings is already initialized, just initialize manager and controller
+        manager = PomodoroManager(timerSettings: settings) // Initialize manager
         statusBarController = StatusBarController(manager: manager, settings: settings)
     }
     

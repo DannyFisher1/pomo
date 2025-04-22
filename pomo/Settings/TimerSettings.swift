@@ -36,6 +36,10 @@ final class TimerSettings: ObservableObject {
     @AppStorage("shortBreakIcon") var shortBreakIcon: String = "☕️"
     @AppStorage("longBreakIcon") var longBreakIcon: String = "🧘"
 
+    // MARK: - Custom Notification Settings
+    @AppStorage("notificationScale") var notificationScale: Double = 1.0 // Scale factor (e.g., 0.8 to 1.5)
+    @AppStorage("notificationDuration") var notificationDuration: Double = 3.5 // Duration in seconds (e.g., 2.0 to 10.0)
+
     // MARK: - Operating Mode
     enum OperatingMode: String, CaseIterable, Identifiable {
         case single = "Single Cycle"
@@ -105,6 +109,9 @@ final class TimerSettings: ObservableObject {
         colorTheme          = .system
         completionSoundName = "Default"
         cycleMode           = .pomodoro
+        // Reset notification settings
+        notificationScale = 1.0
+        notificationDuration = 3.5
         // Reset mode-specific icons
         pomodoroIcon = "🍅"
         shortBreakIcon = "☕️"
