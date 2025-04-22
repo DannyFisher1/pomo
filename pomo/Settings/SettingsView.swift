@@ -81,6 +81,9 @@ struct SettingsView: View {
             
             // Custom Notifications
             notificationSection
+
+            // Application Actions (Added Section)
+            applicationActionsSection
         }
         .padding()
     }
@@ -254,17 +257,31 @@ struct SettingsView: View {
             }
         }
     }
+
+    // Application Actions Section (Added)
+    private var applicationActionsSection: some View {
+        section(title: "Application Actions") {
+            VStack(spacing: 0) {
+                actionRow(icon: "arrow.counterclockwise.circle", label: "Reset All Settings", color: .orange) {
+                    settings.resetToDefaults()
+                    print("Settings reset to defaults via action row")
+                }
+                Divider().padding(.leading, 40)
+                actionRow(icon: "power.circle.fill", label: "Quit Pomo", color: .red) {
+                    NSApplication.shared.terminate(nil)
+                }
+            }
+        }
+    }
     
     private var footerButtons: some View {
+        // Simplified Footer: Only Close button, right-aligned
         HStack {
+            Spacer() // Pushes the button to the right
             Button("Close") {
                 dismiss()
             }
-            Spacer()
-            Button("Save") {
-                dismiss()
-            }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.borderedProminent) 
         }
         .padding()
     }
@@ -356,6 +373,24 @@ struct SettingsView: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
     }
+
+    // Action Row Helper (Added)
+    private func actionRow(icon: String, label: String, color: Color = .accentColor, action: @escaping () -> Void) -> some View {
+         Button(action: action) {
+             HStack {
+                 Label(label, systemImage: icon)
+                     .foregroundColor(color) // Apply color to label
+                 Spacer()
+                 // Optional: Add a chevron or similar indicator if desired
+                 // Image(systemName: "chevron.right")
+                 //    .foregroundColor(.secondary)
+             }
+             .contentShape(Rectangle()) // Make the whole HStack tappable
+         }
+         .buttonStyle(.plain) // Use plain style to avoid default button appearance
+         .padding(.vertical, 8)
+         .padding(.horizontal, 12)
+     }
 }
 
 struct SettingsView_Previews: PreviewProvider {
