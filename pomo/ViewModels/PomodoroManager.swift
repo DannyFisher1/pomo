@@ -134,26 +134,26 @@ class PomodoroManager: ObservableObject {
         // Reset to the appropriate starting state based on the *current* operating mode
         switch timerSettings.operatingMode {
         case .single:
-             // Reset the current single mode timer
+             // Reset the current single mode timer (this is already correct)
              let currentModeDuration = duration(for: currentMode)
              originalDuration = currentModeDuration
              timeRemaining = currentModeDuration
-             // currentStepIndex = 0 // Index is irrelevant here
+             // Ensure index is consistent if needed elsewhere, though less relevant here
+             currentStepIndex = 0 
         case .cycle:
-            // Reset to the beginning of the selected cycle mode
-            currentMode = timerSettings.cycleMode
-            let currentModeDuration = duration(for: currentMode)
-            originalDuration = currentModeDuration
-            timeRemaining = currentModeDuration
-            currentStepIndex = 0 // Reset index for consistency
+             // SHORT RESET: Reset timer for the CURRENTLY active mode in the cycle
+             print("Short reset in Cycle mode - resetting timer for \(currentMode)")
+             let currentModeDuration = duration(for: currentMode)
+             originalDuration = currentModeDuration
+             timeRemaining = currentModeDuration
+             // DO NOT change currentMode or currentStepIndex
         case .routine:
-            // Reset to the beginning of the current routine
-            currentStepIndex = 0
-            let mode = currentRoutine?.steps.first ?? .pomodoro
-            currentMode = mode
-            let currentModeDuration = duration(for: currentMode)
-            originalDuration = currentModeDuration
-            timeRemaining = currentModeDuration
+             // SHORT RESET: Reset timer for the CURRENT step in the routine
+             print("Short reset in Routine mode - resetting timer for step \(currentStepIndex): \(currentMode)")
+             let currentModeDuration = duration(for: currentMode)
+             originalDuration = currentModeDuration
+             timeRemaining = currentModeDuration
+             // DO NOT change currentMode or currentStepIndex
         }
     }
 
@@ -462,6 +462,45 @@ class PomodoroManager: ObservableObject {
             switchMode(to: nextMode, resetIndex: false)
             start()
         }
+    }
+
+    // MARK: - Full Cycle Reset
+    func resetFullCycle() {
+        pause()
+        print("Executing full reset logic...")
+
+        // Reset counters (optional, depending on desired behavior)
+        // completedPomodoros = 0
+        // completedShortBreaks = 0
+        // completedLongBreaks = 0
+
+        switch timerSettings.operatingMode {
+        case .single:
+            // Reset to the beginning of the *currently selected* single mode
+            print("Full reset in Single mode - resetting to start of \(currentMode)")
+            let modeDuration = duration(for: currentMode)
+            originalDuration = modeDuration
+            timeRemaining = modeDuration
+            currentStepIndex = 0 // Reset index for consistency, though less relevant here
+        case .cycle:
+            // Reset to the beginning of the *selected cycle mode*
+            print("Full reset in Cycle mode - resetting to start of \(timerSettings.cycleMode)")
+            currentMode = timerSettings.cycleMode // Ensure we use the designated cycle mode
+            let modeDuration = duration(for: currentMode)
+            originalDuration = modeDuration
+            timeRemaining = modeDuration
+            currentStepIndex = 0 // Reset index
+        case .routine:
+            // Reset to the VERY beginning of the selected routine
+            print("Full reset in Routine mode - resetting to step 0")
+            currentStepIndex = 0
+            let firstMode = currentRoutine?.steps.first ?? .pomodoro
+            currentMode = firstMode
+            let modeDuration = duration(for: currentMode)
+            originalDuration = modeDuration
+            timeRemaining = modeDuration
+        }
+        // Note: We don't automatically start the timer after a full reset.
     }
 
     // MARK: - User Actions
