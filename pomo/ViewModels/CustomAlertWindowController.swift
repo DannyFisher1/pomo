@@ -54,29 +54,48 @@ class CustomAlertWindowController: NSWindowController, NSWindowDelegate {
 
     // Show the window, position it, and start the dismiss timer
     func show() {
-        guard let window = self.window, let screen = NSScreen.main else { return }
+        // Use self.window here, which is guaranteed to exist after init
+        guard let window = self.window, 
+              let screen = NSScreen.main, 
+              let hostingView = window.contentViewController?.view else { // Get hosting view
+            print("Error: Could not get window, screen, or hosting view.") 
+            return
+        }
         
-        print("--- Showing Custom Alert ---") // Log start
-        print("Screen Visible Frame: \(screen.visibleFrame)") // Log screen frame
+        print("--- Showing Custom Alert ---")
+        print("Screen Visible Frame: \(screen.visibleFrame)")
 
         // Add self to the static list *before* calculating position
         Self.activeAlerts.append(self)
 
-        // Log window size *before* setting origin
-        let windowSize = window.frame.size
-        print("Window Size: \(windowSize)") 
+        // Width is known from init's setContentSize
+        let windowWidth = window.frame.size.width
+        print("Initial Window Width (set in init): \(windowWidth)") 
+        
+        // Calculate ACTUAL required height from content
+        let fittingSize = hostingView.fittingSize
+        // Recalculate height based on fitting size, provide scaled fallback
+        let scale = windowWidth / 350 // Infer scale from width
+        let calculatedHeight = fittingSize.height > 1 ? fittingSize.height : 65 * scale // Use fitting height if > 1, else scaled default
+        print("Fitting Size: \(fittingSize), Using Height: \(calculatedHeight)")
 
         let screenFrame = screen.visibleFrame // Use visible frame to avoid menu bar/dock
         
-        // Calculate vertical position based on existing alerts
-        let totalExistingHeight = Self.activeAlerts.dropLast().reduce(0) { $0 + $1.window!.frame.height + Self.alertSpacing }
-        print("Total Existing Height Offset: \(totalExistingHeight)") // Log stacking offset
+        // Calculate vertical position based on existing alerts AND FITTING HEIGHT
+        let totalExistingHeight = Self.activeAlerts.dropLast().reduce(0) { 
+            $0 + ($1.window?.frame.height ?? 0) + Self.alertSpacing 
+        }
+        print("Total Existing Height Offset: \(totalExistingHeight)")
         
-        let originX = screenFrame.maxX - windowSize.width - 20 // 20 points padding from right
-        let originY = screenFrame.maxY - windowSize.height - 20 - totalExistingHeight // 20 points padding from top, stack below others
-        print("Calculated Origin: (X: \(originX), Y: \(originY))") // Log calculated origin
+        // Calculate origin for the BOTTOM-LEFT corner of the window
+        let originX = screenFrame.origin.x + screenFrame.size.width - windowWidth - 20 
+        let originY = screenFrame.origin.y + screenFrame.size.height - calculatedHeight - 20 - totalExistingHeight 
+        print("Calculated Origin (Bottom-Left): (X: \(originX), Y: \(originY))") 
 
-        window.setFrameOrigin(NSPoint(x: originX, y: originY))
+        // Set the frame explicitly *before* showing
+        // window.setFrameOrigin(NSPoint(x: originX, y: originY)) // REMOVED setFrameOrigin
+        window.setFrame(NSRect(x: originX, y: originY, width: windowWidth, height: calculatedHeight), display: false)
+        print("Window frame set to: \(window.frame)")
         
         window.orderFront(nil) // Show the window
         print("Window ordered front.")

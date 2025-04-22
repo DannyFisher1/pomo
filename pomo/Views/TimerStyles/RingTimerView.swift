@@ -4,17 +4,15 @@ struct RingTimerView: View {
     @Binding var timeRemaining: Int
     let totalTime: Int
     let color: Color
-    
+
     var progress: CGFloat {
-        // Calculate progress
-        let rawProgress = 1 - (CGFloat(timeRemaining) / CGFloat(max(1, totalTime))) // Avoid division by zero
-        // Clamp progress between 0 and 1 to prevent drawing issues
+        let rawProgress = 1 - (CGFloat(timeRemaining) / CGFloat(max(1, totalTime)))
         return max(0, min(1, rawProgress))
     }
-    
+
     var minutes: Int { timeRemaining / 60 }
     var seconds: Int { timeRemaining % 60 }
-    
+
     var body: some View {
         ZStack {
             // Background track
@@ -27,8 +25,8 @@ struct RingTimerView: View {
                         lineJoin: .round
                     )
                 )
-            
-            // Progress ring with gradient
+
+            // Progress ring
             Circle()
                 .trim(from: 0, to: progress)
                 .stroke(
@@ -51,12 +49,16 @@ struct RingTimerView: View {
                 .rotationEffect(.degrees(-90))
                 .animation(.easeOut(duration: 0.5), value: progress)
                 .shadow(color: color.opacity(0.3), radius: 8, x: 0, y: 4)
-            
+
             // Time display
             VStack(spacing: 2) {
-                Text("\(minutes):\(seconds, specifier: "%02d")")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                Text("\(String(format: "%02d", minutes)):\(String(format: "%02d", seconds))")
+                    .font(.system(size: 40, weight: .bold, design: .monospaced))
                     .monospacedDigit()
+                    .frame(width: 130, alignment: .center)
+                    .multilineTextAlignment(.center)
+                    .fixedSize()
+                    .layoutPriority(1)
                     .foregroundColor(.primary)
                 
                 Text("remaining")

@@ -10,22 +10,26 @@ struct ContentView: View {
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             VStack(spacing: 15) {
-                ModeIndicatorView(
-                    mode: manager.currentMode,
-                    operatingMode: settings.operatingMode,
-                    routine: settings.getSelectedRoutine(),
-                    currentStepIndex: manager.currentStepIndex
-                )
+                VStack(spacing: 15) {
+                    ModeIndicatorView(
+                        mode: manager.currentMode,
+                        operatingMode: settings.operatingMode,
+                        routine: settings.getSelectedRoutine(),
+                        currentStepIndex: manager.currentStepIndex
+                    )
 
-                RingTimerView(
-                    timeRemaining: $manager.timeRemaining,
-                    totalTime: manager.originalDuration,
-                    color: manager.currentMode.color
-                )
-                .padding(.vertical, 5)
+                    ZStack {
+                        RingTimerView(
+                            timeRemaining: $manager.timeRemaining,
+                            totalTime: manager.originalDuration,
+                            color: manager.currentMode.color
+                        )
+                    }
 
-                ControlButtonsView()
-                    .padding(.vertical, 10)
+                    ControlButtonsView()
+                        .padding(.vertical, 10)
+                }
+                .frame(maxWidth: 230)
 
                 if settings.operatingMode == .single {
                     ModePickerView()
@@ -66,6 +70,7 @@ struct ContentView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
+            .animation(.easeInOut(duration: 0.5), value: manager.currentMode)
         )
         .preferredColorScheme({
             switch settings.colorTheme {
@@ -74,6 +79,5 @@ struct ContentView: View {
                 case .system: return nil // Use system default
             }
         }())
-        .animation(.easeInOut(duration: 0.5), value: manager.currentMode)
     }
 }

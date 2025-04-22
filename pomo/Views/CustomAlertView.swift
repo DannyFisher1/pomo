@@ -36,7 +36,7 @@ struct CustomAlertView: View {
         }
         .padding(.vertical, basePadding * scale)
         .background(
-            .ultraThickMaterial, 
+            .ultraThickMaterial,
             in: RoundedRectangle(cornerRadius: 12 * scale, style: .continuous)
         )
         .frame(maxWidth: 350 * scale)
@@ -50,19 +50,19 @@ struct CustomAlertView_Previews: PreviewProvider {
     static var previews: some View {
         VStack {
             CustomAlertView(
-                title: "Pomodoro Finished!", 
+                title: "Pomodoro Finished!",
                 message: "Did you actually work, or just stare blankly? And maybe a second line.",
                 appIcon: NSApplication.shared.applicationIconImage ?? NSImage(),
                 scale: 1.0
             )
             CustomAlertView(
-                title: "Pomodoro Finished!", 
+                title: "Pomodoro Finished!",
                 message: "Did you actually work, or just stare blankly? And maybe a second line.",
                 appIcon: NSApplication.shared.applicationIconImage ?? NSImage(),
                 scale: 0.8
             )
             CustomAlertView(
-                title: "Pomodoro Finished!", 
+                title: "Pomodoro Finished!",
                 message: "Did you actually work, or just stare blankly? And maybe a second line.",
                 appIcon: NSApplication.shared.applicationIconImage ?? NSImage(),
                 scale: 1.3
@@ -70,4 +70,5 @@ struct CustomAlertView_Previews: PreviewProvider {
         }
         .padding()
     }
-} 
+    
+}

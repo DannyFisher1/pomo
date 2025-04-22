@@ -228,7 +228,7 @@ struct SettingsView: View {
             }
             .padding()
         }
-        .frame(minWidth: 360, minHeight: 550)
+        .frame(minWidth: 360)
         .sheet(isPresented: $showingRoutineManager) { // Add sheet modifier
             RoutineManagementView()
                 .environmentObject(settings) // Pass environment object

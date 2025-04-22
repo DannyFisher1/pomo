@@ -51,18 +51,28 @@ class StatusBarController {
 
     private func updateStatusIcon() {
         guard let button = statusItem.button else { return }
+
         let m = manager.timeRemaining / 60
         let s = manager.timeRemaining % 60
         let formattedTime = String(format: "%02d:%02d", m, s)
-        
+
         let currentIcon: String
         switch manager.currentMode {
         case .pomodoro: currentIcon = settings.pomodoroIcon
         case .shortBreak: currentIcon = settings.shortBreakIcon
         case .longBreak: currentIcon = settings.longBreakIcon
         }
-        
-        button.title = "\(currentIcon) \(formattedTime)"
+
+        // Build monospaced + system-styled title
+        let text = "\(currentIcon) \(formattedTime)"
+        let font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .medium)
+
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.labelColor // auto adapts to dark/light mode
+        ]
+
+        button.attributedTitle = NSAttributedString(string: text, attributes: attributes)
     }
 
     @objc func togglePopover(_ sender: AnyObject?) {
