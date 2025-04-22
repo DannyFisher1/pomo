@@ -63,6 +63,27 @@ struct SettingsView: View {
                             Divider().padding(.leading, 40)
                         }
 
+                        // Conditionally show Cycle Mode Picker
+                        if settings.operatingMode == .cycle {
+                            VStack(spacing: 0) {
+                                HStack {
+                                    Label("Mode to Repeat", systemImage: "repeat")
+                                    Spacer()
+                                    Picker("Mode to Repeat", selection: $settings.cycleMode) {
+                                        ForEach(TimerMode.allCases) { mode in
+                                            Text(mode.rawValue).tag(mode)
+                                        }
+                                    }
+                                    .labelsHidden()
+                                    .pickerStyle(.menu)
+                                    .frame(maxWidth: 150)
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                Divider().padding(.leading, 40)
+                            }
+                        }
+
                         toggleRow(icon: "speaker.wave.2",       label: "Play Sounds",     isOn: $settings.playSounds)
                         
                         // Add Sound Picker Row
@@ -91,7 +112,7 @@ struct SettingsView: View {
                         toggleRow(icon: "bell.badge",           label: "Show Notifications", isOn: $settings.showNotifications)
                     }
 
-                    // Conditionally show Routine section
+                    // Conditionally show Routine section (hide for Single and Cycle)
                     if settings.operatingMode == .routine {
                         section(title: "Active Routine") {
                             VStack(alignment: .leading, spacing: 8) {
@@ -158,24 +179,10 @@ struct SettingsView: View {
                             .padding(.horizontal, 12)
                             Divider().padding(.leading, 40)
 
-                            // Add Status Bar Icon TextField
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Label("Status Bar Icon", systemImage: "tag")
-                                    Spacer()
-                                    TextField("", text: $settings.statusBarIcon, prompt: Text("Emoji"))
-                                        .textFieldStyle(.roundedBorder)
-                                        .frame(width: 50)
-                                        .multilineTextAlignment(.center)
-                                }
-                                Text("Press Ctrl+Cmd+Space for emoji picker.")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .padding(.leading, 35)
-                            }
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            // No divider needed after the last item
+                            // Add Mode-Specific Icon TextFields
+                            iconSettingRow(label: "Pomodoro Icon", iconBinding: $settings.pomodoroIcon)
+                            iconSettingRow(label: "Short Break Icon", iconBinding: $settings.shortBreakIcon)
+                            iconSettingRow(label: "Long Break Icon", iconBinding: $settings.longBreakIcon)
                         }
                     }
                 }
@@ -204,6 +211,30 @@ struct SettingsView: View {
             RoutineManagementView()
                 .environmentObject(settings) // Pass environment object
         }
+    }
+
+    // MARK: - Helper for Icon Setting Row
+    @ViewBuilder
+    private func iconSettingRow(label: String, iconBinding: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                // Use a generic icon for the row label itself
+                Label(label, systemImage: "tag") 
+                Spacer()
+                TextField("", text: iconBinding, prompt: Text("Emoji"))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 50)
+                    .multilineTextAlignment(.center)
+            }
+            Text("Press Ctrl+Cmd+Space for emoji picker.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .padding(.leading, 35)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        // Add divider unless it's the last item (logic might be needed if more rows added)
+        // Divider().padding(.leading, 40)
     }
 
     // MARK: – Section helper

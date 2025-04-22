@@ -32,7 +32,9 @@ final class TimerSettings: ObservableObject {
     @AppStorage("showNotifications")     var showNotifications: Bool  = true
     @AppStorage("colorTheme")            var colorTheme: ColorTheme   = .system
     @AppStorage("completionSoundName")   var completionSoundName: String = "Ping"
-    @AppStorage("statusBarIcon")        var statusBarIcon: String = "🍅"
+    @AppStorage("pomodoroIcon") var pomodoroIcon: String = "🍅"
+    @AppStorage("shortBreakIcon") var shortBreakIcon: String = "☕️"
+    @AppStorage("longBreakIcon") var longBreakIcon: String = "🧘"
 
     // MARK: - Operating Mode
     enum OperatingMode: String, CaseIterable, Identifiable {
@@ -42,6 +44,7 @@ final class TimerSettings: ObservableObject {
         var id: String { rawValue }
     }
     @AppStorage("operatingMode") var operatingMode: OperatingMode = .routine
+    @AppStorage("cycleMode") var cycleMode: TimerMode = .pomodoro // Mode to repeat in Cycle mode
 
     // MARK: - Routine Settings
     @AppStorage("savedRoutines") private var savedRoutinesData: Data = encodedDefaultRoutines()
@@ -101,10 +104,12 @@ final class TimerSettings: ObservableObject {
         showNotifications   = true
         colorTheme          = .system
         completionSoundName = "Ping"
-        statusBarIcon       = "🍅"
-        operatingMode       = .routine
-        // Reset routines using the save function
+        cycleMode           = .pomodoro
+        // Reset mode-specific icons
+        pomodoroIcon = "🍅"
+        shortBreakIcon = "☕️"
+        longBreakIcon = "🧘"
+        // Reset routines
         saveRoutines(TimerSettings.defaultRoutines())
-        // selectedRoutineID is handled within saveRoutines
     }
 }

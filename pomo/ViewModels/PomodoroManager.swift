@@ -16,14 +16,22 @@ class PomodoroManager: ObservableObject {
     var originalDuration: Int = 0
     private let timerSettings: TimerSettings
     private var settingsCancellable: AnyCancellable?
-    private var currentRoutine: Routine? // Store the loaded routine
+    private var currentRoutine: Routine?
+    private var previousOperatingModeSetting: TimerSettings.OperatingMode
 
     init(timerSettings: TimerSettings) {
         self.timerSettings = timerSettings
-        // Load initial routine and set starting state
+        self.previousOperatingModeSetting = timerSettings.operatingMode
+        // Load initial routine and set starting state based on Operating Mode
         self.currentRoutine = timerSettings.getSelectedRoutine()
         self.currentStepIndex = 0
-        let initialMode = currentRoutine?.steps.first ?? .pomodoro
+        
+        let initialMode: TimerMode
+        switch timerSettings.operatingMode {
+        case .single: initialMode = .pomodoro // Default to pomodoro for single start
+        case .cycle: initialMode = timerSettings.cycleMode // Use selected cycle mode
+        case .routine: initialMode = currentRoutine?.steps.first ?? .pomodoro // Use first routine step
+        }
         self.currentMode = initialMode
 
         // Calculate initial duration DIRECTLY without calling instance method
@@ -46,25 +54,45 @@ class PomodoroManager: ObservableObject {
             .sink { [weak self] _ in
                 guard let self = self else { return }
 
-                let previouslySelectedRoutine = self.currentRoutine // Store previous state
-                let newSelectedRoutine = self.timerSettings.getSelectedRoutine() // Use function
+                let opModeChanged = self.previousOperatingModeSetting != self.timerSettings.operatingMode
+                let newOperatingMode = self.timerSettings.operatingMode
+                let previouslySelectedRoutine = self.currentRoutine
+                let newSelectedRoutine = self.timerSettings.getSelectedRoutine()
                 let routineChanged = previouslySelectedRoutine != newSelectedRoutine
+                let previousCycleMode = self.currentMode // Approximation
+                let newCycleMode = self.timerSettings.cycleMode
 
-                if routineChanged {
-                    self.currentRoutine = newSelectedRoutine
-                    if !self.isRunning {
+                // --- Handle Operating Mode Change --- 
+                if opModeChanged && !self.isRunning {
+                    switch newOperatingMode {
+                    case .single:
+                        self.switchMode(to: .pomodoro, resetIndex: true)
+                    case .cycle:
+                        self.switchMode(to: newCycleMode, resetIndex: true)
+                    case .routine:
+                        self.currentRoutine = newSelectedRoutine
                         self.currentStepIndex = 0
                         let nextMode = self.currentRoutine?.steps.first ?? .pomodoro
                         self.switchMode(to: nextMode, resetIndex: false)
                     }
-                } else {
-                    // Routine is the same, but other settings (like duration) might have changed
-                    let newDuration = self.duration(for: self.currentMode)
-                    if !self.isRunning && self.originalDuration != newDuration {
+                // --- Handle Routine Selection Change (within Routine mode) --- 
+                } else if newOperatingMode == .routine && routineChanged && !self.isRunning {
+                    self.currentRoutine = newSelectedRoutine
+                    self.currentStepIndex = 0
+                    let nextMode = self.currentRoutine?.steps.first ?? .pomodoro
+                    self.switchMode(to: nextMode, resetIndex: false)
+                // --- Handle Cycle Mode Selection Change (within Cycle mode) ---
+                } else if newOperatingMode == .cycle && previousCycleMode != newCycleMode && !self.isRunning {
+                     self.switchMode(to: newCycleMode, resetIndex: true)
+                // --- Handle Other Settings Change (like duration) --- 
+                } else if !self.isRunning {
+                     let newDuration = self.duration(for: self.currentMode)
+                     if self.originalDuration != newDuration {
                         self.originalDuration = newDuration
                         self.timeRemaining = newDuration
                     }
                 }
+                self.previousOperatingModeSetting = newOperatingMode
             }
     }
 
@@ -102,15 +130,30 @@ class PomodoroManager: ObservableObject {
 
     func reset() {
         pause()
-        // Reset to the beginning of the current step in the routine
-        currentStepIndex = 0 // Reset step index on manual reset
-        let mode = currentRoutine?.steps.first ?? .pomodoro // Reset to first step mode
-        if currentMode != mode {
-             currentMode = mode // Update mode if it changed
+        // Reset to the appropriate starting state based on the *current* operating mode
+        switch timerSettings.operatingMode {
+        case .single:
+             // Reset the current single mode timer
+             let currentModeDuration = duration(for: currentMode)
+             originalDuration = currentModeDuration
+             timeRemaining = currentModeDuration
+             // currentStepIndex = 0 // Index is irrelevant here
+        case .cycle:
+            // Reset to the beginning of the selected cycle mode
+            currentMode = timerSettings.cycleMode
+            let currentModeDuration = duration(for: currentMode)
+            originalDuration = currentModeDuration
+            timeRemaining = currentModeDuration
+            currentStepIndex = 0 // Reset index for consistency
+        case .routine:
+            // Reset to the beginning of the current routine
+            currentStepIndex = 0
+            let mode = currentRoutine?.steps.first ?? .pomodoro
+            currentMode = mode
+            let currentModeDuration = duration(for: currentMode)
+            originalDuration = currentModeDuration
+            timeRemaining = currentModeDuration
         }
-        let currentModeDuration = duration(for: currentMode)
-        originalDuration = currentModeDuration
-        timeRemaining = currentModeDuration
     }
 
     // Add resetIndex flag (default true for manual switches)
@@ -147,13 +190,16 @@ class PomodoroManager: ObservableObject {
             }
         }
 
+        let finishedMode = self.currentMode // Capture the mode that just finished
+
         let delayBeforeNextAction: TimeInterval = 2.0
         DispatchQueue.main.asyncAfter(deadline: .now() + delayBeforeNextAction) { [weak self] in
             guard let self = self else { return }
 
-            // Increment total counts based on the mode that just finished
-            if self.timeRemaining == 0 { // Ensure timer actually finished
-                switch self.currentMode {
+            // Increment total counts based on the captured finished mode
+            // Ensure timer is still at 0 before incrementing (in case of rapid manual intervention)
+            if self.timeRemaining == 0 {
+                switch finishedMode { // Use the captured mode
                 case .pomodoro: self.completedPomodoros += 1
                 case .shortBreak: self.completedShortBreaks += 1
                 case .longBreak: self.completedLongBreaks += 1
@@ -162,7 +208,6 @@ class PomodoroManager: ObservableObject {
 
             // Check Operating Mode before deciding whether to auto-start
             guard self.timerSettings.operatingMode != .single else {
-                // In Single Cycle mode, we never auto-start.
                 return // Stop here
             }
 
@@ -170,7 +215,6 @@ class PomodoroManager: ObservableObject {
             if self.timeRemaining == 0 && !self.isRunning {
                 self.autoCycle()
             }
-            // Timer remains paused at 00:00 if mode is single
         }
     }
 
@@ -178,12 +222,14 @@ class PomodoroManager: ObservableObject {
     private func autoCycle() {
         switch timerSettings.operatingMode {
         case .single:
-            // This case should technically not be reached due to guard in finishCycle
-            // but included for completeness. Do nothing.
-            break
+            break // Should not be reached
         case .cycle:
-            // Repeat the current mode. No need to switch mode or change index.
-            start() // Just start the timer again with the same mode/duration.
+            // Reset and start the *selected* cycleMode
+            currentMode = timerSettings.cycleMode // Ensure currentMode is correct
+            let cycleDuration = duration(for: currentMode)
+            originalDuration = cycleDuration
+            timeRemaining = cycleDuration
+            start()
         case .routine:
             // Follow the routine steps (existing logic)
             guard let routine = currentRoutine, !routine.steps.isEmpty else {
@@ -205,29 +251,37 @@ class PomodoroManager: ObservableObject {
 
     // MARK: - User Actions
     func skipCurrentStep() {
+        // Increment counter for the mode being skipped
+        switch currentMode {
+        case .pomodoro: completedPomodoros += 1
+        case .shortBreak: completedShortBreaks += 1
+        case .longBreak: completedLongBreaks += 1
+        }
+        
         pause() // Stop the timer
 
-        // Determine next step based on operating mode
         switch timerSettings.operatingMode {
         case .single:
-            // Skip in single mode means finish/reset the current one.
-            // Reset timer to 0, keep current mode.
             timeRemaining = 0
-            originalDuration = duration(for: currentMode) // Ensure original is correct
+            originalDuration = duration(for: currentMode)
         case .cycle:
-            // Skip in cycle mode means finish current repetition and reset for next.
-            // Reset timer to full duration of the current mode.
-            reset() // Use existing reset logic which resets time for current mode
+            // Reset and start the selected cycle mode
+            currentMode = timerSettings.cycleMode // Ensure mode is correct before reset/start
+            reset() // Resets time for the (now correct) currentMode
+            start() 
         case .routine:
             // Skip in routine mode means advance to the next step.
             guard let routine = currentRoutine, !routine.steps.isEmpty else {
                 reset() // Fallback to reset if no routine
+                // Should we start after fallback reset? Let's assume yes for now.
+                start()
                 return
             }
             let nextStepIndex = (currentStepIndex + 1) % routine.steps.count
             let nextMode = routine.steps[nextStepIndex]
             self.currentStepIndex = nextStepIndex
-            switchMode(to: nextMode, resetIndex: false) // Switch, don't start
+            switchMode(to: nextMode, resetIndex: false) // Switch mode/time
+            start() // Immediately start the next step
         }
     }
 }

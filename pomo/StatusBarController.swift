@@ -9,6 +9,7 @@ class StatusBarController {
     private var settings: TimerSettings
     private var updateTimer: Timer?
     private var settingsCancellable: AnyCancellable?
+    private var managerModeCancellable: AnyCancellable?
 
     init(manager: PomodoroManager, settings: TimerSettings) {
         self.manager = manager
@@ -24,21 +25,27 @@ class StatusBarController {
         )
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        updateStatusIcon()
         if let button = statusItem.button {
-            button.title = settings.statusBarIcon
             button.action = #selector(togglePopover(_:))
             button.target = self
         }
 
         startStatusTimer()
-        observeSettings()
+        observeSettingsAndManager()
     }
 
-    private func observeSettings() {
+    private func observeSettingsAndManager() {
         settingsCancellable = settings.objectWillChange
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStatusIcon()
+            }
+        
+        managerModeCancellable = manager.$currentMode
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                 self?.updateStatusIcon()
             }
     }
 
@@ -46,8 +53,16 @@ class StatusBarController {
         guard let button = statusItem.button else { return }
         let m = manager.timeRemaining / 60
         let s = manager.timeRemaining % 60
-        let formatted = String(format: "%02d:%02d", m, s)
-        button.title = "\(settings.statusBarIcon) \(formatted)"
+        let formattedTime = String(format: "%02d:%02d", m, s)
+        
+        let currentIcon: String
+        switch manager.currentMode {
+        case .pomodoro: currentIcon = settings.pomodoroIcon
+        case .shortBreak: currentIcon = settings.shortBreakIcon
+        case .longBreak: currentIcon = settings.longBreakIcon
+        }
+        
+        button.title = "\(currentIcon) \(formattedTime)"
     }
 
     @objc func togglePopover(_ sender: AnyObject?) {
@@ -74,5 +89,6 @@ class StatusBarController {
     deinit {
         updateTimer?.invalidate()
         settingsCancellable?.cancel()
+        managerModeCancellable?.cancel()
     }
 }

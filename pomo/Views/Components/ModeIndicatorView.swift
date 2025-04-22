@@ -1,20 +1,14 @@
-//
-//  ModeIndicatorView.swift
-//  pomo
-//
-//  Created by Danny Fisher on 4/21/25.
-//
-
 import SwiftUI
 
 struct ModeIndicatorView: View {
-    // Restore required inputs
     let mode: TimerMode
     let operatingMode: TimerSettings.OperatingMode
-    let routine: Routine? // The currently selected routine (if any)
-    let currentStepIndex: Int // Current step index within the routine
+    let routine: Routine?
+    let currentStepIndex: Int
 
-    // Computed properties for display logic
+    @State private var showRoutineDetails = false
+    @State private var showFullList = false
+
     private var statusText: String {
         switch operatingMode {
         case .single:
@@ -22,40 +16,98 @@ struct ModeIndicatorView: View {
         case .cycle:
             return "\(mode.rawValue) (Repeating)"
         case .routine:
-            // Just show the current mode name
             return mode.rawValue
         }
     }
 
-    // Bring back nextStepText logic
     private var nextStepText: String? {
-        guard operatingMode == .routine, let routine = routine, !routine.steps.isEmpty else {
-            return nil // Only show next step for routines
+        guard operatingMode == .routine,
+              let routine = routine,
+              !routine.steps.isEmpty
+        else { return nil }
+        let nextIndex = (currentStepIndex + 1) % routine.steps.count
+        return "(Next: \(routine.steps[nextIndex].rawValue))"
+    }
+
+    private func upcomingSteps(full: Bool) -> [(index: Int, step: TimerMode)] {
+        guard operatingMode == .routine,
+              let steps = routine?.steps,
+              steps.count > currentStepIndex + 1
+        else { return [] }
+
+        let start = currentStepIndex + 1
+        let slice: [TimerMode]
+        if full {
+            slice = Array(steps[start...])
+        } else {
+            let count = min(3, steps.count - start)
+            slice = Array(steps[start..<(start + count)])
         }
-        let nextStepIndex = (currentStepIndex + 1) % routine.steps.count
-        let nextStepName = routine.steps[nextStepIndex].rawValue
-        return "(Next: \(nextStepName))"
+
+        return slice.enumerated()
+            .map { offset, step in (index: start + offset, step: step) }
     }
 
     var body: some View {
-        VStack(alignment: .center, spacing: 4) {
-            HStack(spacing: 8) {
-                Image(systemName: mode.icon)
-                    .foregroundColor(mode.color)
-                Text(statusText) // Now simpler for routine mode
-                    .font(.headline.weight(.medium))
-                    .lineLimit(1)
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 16)
-            .background(mode.color.opacity(0.1))
-            .clipShape(Capsule())
+        VStack(spacing: 4) {
+            Button {
+                showRoutineDetails.toggle()
+            } label: {
+                VStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        Image(systemName: mode.icon)
+                            .foregroundColor(mode.color)
+                        Text(statusText)
+                            .font(.headline.weight(.medium))
+                            .lineLimit(1)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .background(mode.color.opacity(0.1))
+                    .clipShape(Capsule())
 
-            // Show Next Step below main indicator
-            if let nextStep = nextStepText {
-                Text(nextStep)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    if let next = nextStepText {
+                        Text(next)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(operatingMode != .routine)
+            .popover(isPresented: $showRoutineDetails, arrowEdge: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Upcoming in “\(routine?.name ?? "")”:")
+                        .font(.caption).bold()
+
+                    ForEach(upcomingSteps(full: showFullList), id: \.index) { item in
+                        HStack {
+                            Text("\(item.index + 1).")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Image(systemName: item.step.icon)
+                                .foregroundColor(item.step.color)
+                            Text(item.step.rawValue)
+                                .font(.caption)
+                        }
+                    }
+                    
+
+                    let remainingSteps = (routine?.steps.count ?? 0) - currentStepIndex - 1
+                    if remainingSteps > 3 {
+                        Button(showFullList ? "Show Less" : "Show All") {
+                            showFullList.toggle()
+                        }
+                        .font(.caption)
+                        .padding(.top, 4)
+                    }
+
+                }
+                .padding(10)
+                .background(.regularMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .shadow(radius: 3)
+                .frame(maxWidth: 250)
             }
         }
     }
