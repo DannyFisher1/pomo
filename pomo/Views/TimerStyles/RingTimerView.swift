@@ -6,7 +6,10 @@ struct RingTimerView: View {
     let color: Color
     
     var progress: CGFloat {
-        1 - (CGFloat(timeRemaining) / CGFloat(totalTime))
+        // Calculate progress
+        let rawProgress = 1 - (CGFloat(timeRemaining) / CGFloat(max(1, totalTime))) // Avoid division by zero
+        // Clamp progress between 0 and 1 to prevent drawing issues
+        return max(0, min(1, rawProgress))
     }
     
     var minutes: Int { timeRemaining / 60 }
@@ -50,19 +53,19 @@ struct RingTimerView: View {
                 .shadow(color: color.opacity(0.3), radius: 8, x: 0, y: 4)
             
             // Time display
-            VStack(spacing: 4) {
+            VStack(spacing: 2) {
                 Text("\(minutes):\(seconds, specifier: "%02d")")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundColor(.primary)
                     .contentTransition(.numericText())
                 
                 Text("remaining")
-                    .font(.caption)
+                    .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
         }
-        .frame(width: 220, height: 220)
-        .padding(20)
+        .frame(width: 200, height: 200)
+        .padding(15)
     }
 }

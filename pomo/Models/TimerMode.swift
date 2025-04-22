@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum TimerMode: String, CaseIterable, Identifiable {
+enum TimerMode: String, CaseIterable, Identifiable, Codable {
     case pomodoro = "Pomodoro"
     case shortBreak = "Short Break"
     case longBreak = "Long Break"

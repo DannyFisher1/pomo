@@ -5,8 +5,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarController: StatusBarController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let manager = PomodoroManager()
+        // Create settings first
         let settings = TimerSettings()
+        // Inject settings into the manager
+        let manager = PomodoroManager(timerSettings: settings)
 
         statusBarController = StatusBarController(manager: manager, settings: settings)
     }

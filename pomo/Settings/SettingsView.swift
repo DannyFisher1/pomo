@@ -1,166 +1,264 @@
-import SwiftUI
+//
+//  File: pomo/Settings/SettingsView.swift
+//
 
+import SwiftUI
+import AppKit // Ensure AppKit is imported for NSSound
+
+extension Notification.Name {
+    /// Posted when the user taps "Save" in SettingsView
+    static let settingsDidSave = Notification.Name("settingsDidSave")
+}
 
 struct SettingsView: View {
-    @EnvironmentObject var settings: TimerSettings
-    // Removed: @State private var contentHeight: CGFloat = 0
-    @Environment(\.dismiss) var dismiss // Use dismiss for programmatic closing if presented modally
+    @EnvironmentObject private var settings: TimerSettings
+    @Environment(\.dismiss)   private var dismiss
+    @State private var showingRoutineManager = false // State for sheet
 
     var body: some View {
-        // Removed outer GeometryReader - not needed for this layout
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) { // Use alignment .leading for section titles
-                // Header with Close Button
-                HStack {
-                    Spacer()
-                    Button {
-                        // Try finding the specific window first if not presented modally
-                        if let window = NSApplication.shared.windows.first(where: { $0.contentView is NSHostingView<SettingsView> }) {
-                             window.close()
-                        } else {
-                            // Fallback for other presentation methods or if window finding fails
-                             NSApp.keyWindow?.close()
-                            // If presented modally (e.g., .sheet), use dismiss:
-                            // dismiss()
-                        }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                            .imageScale(.large)
-                    }
-                    .buttonStyle(.plain)
-                    .padding([.top, .trailing], 10)
-                }
-                .padding(.bottom, 10) // Add some space below the close button
-
-                // Timer Durations
-                section(title: "Timer Durations") {
-                    settingRow(icon: "timer", label: "Pomodoro") {
-                        Stepper("", value: $settings.pomodoroMinutes, in: 1...90)
-                            .labelsHidden() // Hide Stepper's default label
-                        Text("\(settings.pomodoroMinutes) min")
-                            .frame(width: 60, alignment: .trailing) // Align text right
-                    }
-                    settingRow(icon: "cup.and.saucer", label: "Short Break") {
-                        Stepper("", value: $settings.shortBreakMinutes, in: 1...30)
-                            .labelsHidden()
-                        Text("\(settings.shortBreakMinutes) min")
-                            .frame(width: 60, alignment: .trailing)
-                    }
-                    settingRow(icon: "moon.zzz", label: "Long Break") {
-                        Stepper("", value: $settings.longBreakMinutes, in: 1...60)
-                            .labelsHidden()
-                        Text("\(settings.longBreakMinutes) min")
-                            .frame(width: 60, alignment: .trailing)
-                    }
-                }
-
-                // Behavior
-                section(title: "Behavior") {
-                    settingRow(icon: "arrow.forward.circle", label: "Auto-Start Next") { // Adjusted label
-                        Toggle("", isOn: $settings.autoStartNext)
-                           .labelsHidden() // Hide Toggle's default label
-                           .toggleStyle(.switch) // Ensure it looks like a switch
-                    }
-                    settingRow(icon: "speaker.wave.2", label: "Play Sounds") {
-                        Toggle("", isOn: $settings.playSounds)
-                           .labelsHidden()
-                           .toggleStyle(.switch)
-                    }
-                    settingRow(icon: "bell.badge", label: "Show Notifications") { // Adjusted label
-                        Toggle("", isOn: $settings.showNotifications)
-                           .labelsHidden()
-                           .toggleStyle(.switch)
-                    }
-                }
-
-                // Appearance
-                section(title: "Appearance") {
-                    settingRow(icon: "paintpalette", label: "Theme") {
-                        Picker("", selection: $settings.colorTheme) {
-                            ForEach(TimerSettings.ColorTheme.allCases) { theme in
-                                Text(theme.rawValue.capitalized).tag(theme) // Capitalize name
-                            }
-                        }
-                        .labelsHidden() // Hide Picker's default label
-                        .pickerStyle(.menu)
-                        .frame(maxWidth: 150, alignment: .trailing) // Give picker enough width, align right
-                    }
-                }
-
-                // Reset Button
-                Button(role: .destructive) { // Use destructive role for reset/delete actions
-                    settings.resetToDefaults()
+        VStack(spacing: 0) {
+            // MARK: Header
+            HStack {
+                Text("Settings")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    dismiss()
                 } label: {
-                    Label("Reset All Settings", systemImage: "trash")
-                        .frame(maxWidth: .infinity) // Make label fill width
-                        .padding(.vertical, 8) // Adjust padding
+                    Image(systemName: "xmark.circle.fill")
+                        .imageScale(.large)
                 }
-                .buttonStyle(.borderedProminent) // Keep prominent style for visibility
-                // .tint(.red) // tint is often automatic with .destructive role + prominent style
-                .padding(.horizontal, 20) // Keep horizontal padding
-                .padding(.top, 20) // Space above button
-                .padding(.bottom, 20) // Space below button
+                .buttonStyle(.plain)
             }
-            // Removed the inner GeometryReader background modifier
+            .padding()
+
+            Divider()
+
+            // MARK: Content
+            ScrollView {
+                VStack(spacing: 20) {
+                    section(title: "Timer Durations") {
+                        settingRow(icon: "timer",        label: "Pomodoro",     value: $settings.pomodoroMinutes,   range: 1...90)
+                        settingRow(icon: "cup.and.saucer", label: "Short Break",  value: $settings.shortBreakMinutes, range: 1...30)
+                        settingRow(icon: "moon.zzz",     label: "Long Break",   value: $settings.longBreakMinutes,   range: 1...60)
+                    }
+
+                    section(title: "Behavior") {
+                        // Add Operating Mode Picker
+                        VStack(spacing: 0) {
+                            HStack {
+                                Label("Timer Mode", systemImage: "repeat.circle")
+                                Spacer()
+                                Picker("Operating Mode", selection: $settings.operatingMode) {
+                                    ForEach(TimerSettings.OperatingMode.allCases) { mode in
+                                        Text(mode.rawValue).tag(mode)
+                                    }
+                                }
+                                .labelsHidden()
+                                .pickerStyle(.menu)
+                                .frame(maxWidth: 150)
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            Divider().padding(.leading, 40)
+                        }
+
+                        toggleRow(icon: "speaker.wave.2",       label: "Play Sounds",     isOn: $settings.playSounds)
+                        
+                        // Add Sound Picker Row
+                        VStack(spacing: 0) {
+                            HStack {
+                                Label("Completion Sound", systemImage: "music.note")
+                                Spacer()
+                                Picker("Completion Sound", selection: $settings.completionSoundName) {
+                                    ForEach(settings.availableSoundNames, id: \.self) { soundName in
+                                        Text(soundName).tag(soundName)
+                                    }
+                                }
+                                .labelsHidden()
+                                .pickerStyle(.menu)
+                                .frame(maxWidth: 150)
+                                // Play sound when selection changes
+                                .onChange(of: settings.completionSoundName) { _, newSoundName in
+                                    NSSound(named: newSoundName)?.play()
+                                }
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            Divider().padding(.leading, 40)
+                        }
+
+                        toggleRow(icon: "bell.badge",           label: "Show Notifications", isOn: $settings.showNotifications)
+                    }
+
+                    // Conditionally show Routine section
+                    if settings.operatingMode == .routine {
+                        section(title: "Active Routine") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Picker("Select Routine", selection: $settings.selectedRoutineID) {
+                                    ForEach(settings.getRoutines()) { routine in
+                                        Text(routine.name).tag(routine.id.uuidString as String?)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .padding(.bottom, 5)
+
+                                // Display steps of selected routine
+                                if let selectedRoutine = settings.getSelectedRoutine() {
+                                    Text("Steps in \"\(selectedRoutine.name)\":")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading)
+
+                                    ForEach(Array(selectedRoutine.steps.enumerated()), id: \.offset) { index, step in
+                                        HStack {
+                                            Text("  \(index + 1).") // Indent step number
+                                            Image(systemName: step.icon)
+                                                .foregroundColor(step.color)
+                                                .frame(width: 20) // Align icons
+                                            Text(step.rawValue)
+                                        }
+                                        .font(.callout)
+                                        .padding(.leading)
+                                    }
+                                } else {
+                                    Text("No routine selected or available.")
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading)
+                                }
+
+                                // Add Manage Routines Button
+                                HStack {
+                                    Spacer()
+                                    Button("Manage Routines...") {
+                                        showingRoutineManager = true
+                                    }
+                                    .buttonStyle(.link)
+                                }
+                                .padding(.top, 5)
+                            }
+                            .padding(.vertical, 5)
+                        }
+                    }
+
+                    section(title: "Appearance") {
+                        VStack(spacing: 0) {
+                            HStack {
+                                Label("Theme", systemImage: "paintpalette")
+                                Spacer()
+                                Picker("", selection: $settings.colorTheme) {
+                                    ForEach(TimerSettings.ColorTheme.allCases) { theme in
+                                        Text(theme.rawValue).tag(theme)
+                                    }
+                                }
+                                .labelsHidden()
+                                .pickerStyle(.menu)
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            Divider().padding(.leading, 40)
+
+                            // Add Status Bar Icon TextField
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Label("Status Bar Icon", systemImage: "tag")
+                                    Spacer()
+                                    TextField("", text: $settings.statusBarIcon, prompt: Text("Emoji"))
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(width: 50)
+                                        .multilineTextAlignment(.center)
+                                }
+                                Text("Press Ctrl+Cmd+Space for emoji picker.")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .padding(.leading, 35)
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            // No divider needed after the last item
+                        }
+                    }
+                }
+                .padding()
+            }
+
+            Divider()
+
+            // MARK: Save / Cancel buttons
+            HStack {
+                Button("Close") {
+                    dismiss()
+                }
+                Spacer()
+                Button("Save") {
+                    // applyAndSave()
+                    // NotificationCenter.default.post(name: .settingsDidSave, object: nil)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding()
         }
-        // Removed the complex frame modifier on ScrollView
-        // Apply size constraints here, outside the ScrollView
-        .frame(width: 360, height: 550) // Suggestion: Use a fixed size or maxHeight
-        // Or use maxHeight for more flexibility:
-        // .frame(width: 360, maxHeight: 600)
+        .frame(minWidth: 360, minHeight: 550)
+        .sheet(isPresented: $showingRoutineManager) { // Add sheet modifier
+            RoutineManagementView()
+                .environmentObject(settings) // Pass environment object
+        }
     }
 
-    // MARK: - Reusable Components (Refined)
-
-    @ViewBuilder // Use @ViewBuilder for the section content
+    // MARK: – Section helper
+    @ViewBuilder
     private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) { // Added spacing between title and box
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.headline)
                 .foregroundColor(.secondary)
-                .padding(.horizontal, 20)
-
-            // Apply background and shape to the content VStack
-            VStack(spacing: 0, content: content) // Rows stack tightly
-                .background(.background.secondary) // Use semantic background color (adapts to light/dark)
-                // Alternatively, use Material: .background(Material.regular)
-                .clipShape(RoundedRectangle(cornerRadius: 10)) // Clip the background
-                .overlay( // Optional: Add a subtle border
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
-                )
-                .padding(.horizontal, 20) // Padding around the content box
+            VStack(spacing: 0) {
+                content()
+            }
+            .background(.secondary.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
-        .padding(.bottom, 20) // Space below the entire section
     }
 
-    // Make the last row in a section not show a divider
-    @ViewBuilder
-    private func settingRow<Content: View>(icon: String, label: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 0) { // Use VStack to hold row content and divider
+    // MARK: – Numeric setting row
+    private func settingRow(icon: String, label: String, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
+        VStack(spacing: 0) {
             HStack {
                 Label(label, systemImage: icon)
-                    .foregroundColor(.primary)
                 Spacer()
-                content() // The control (Stepper, Toggle, Picker)
+                Stepper("", value: value, in: range)
+                    .labelsHidden()
+                Text("\(value.wrappedValue) min")
+                    .frame(width: 60, alignment: .trailing)
             }
-            .padding(.horizontal, 12) // Padding inside the row
-            .padding(.vertical, 10)  // Padding inside the row
-
-            // Add Divider below all rows except the last one (logic handled in section usually)
-            // For simplicity here, let's add it always and maybe hide the last one if needed
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
             Divider()
-                .padding(.leading, 40) // Indent divider to align with text/controls
+                .padding(.leading, 40)
+        }
+    }
+
+    // MARK: – Toggle setting row
+    private func toggleRow(icon: String, label: String, isOn: Binding<Bool>) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Label(label, systemImage: icon)
+                Spacer()
+                Toggle("", isOn: isOn)
+                    .labelsHidden()
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            Divider()
+                .padding(.leading, 40)
         }
     }
 }
 
-// MARK: - Preview
-
 struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         SettingsView()
-            .environmentObject(TimerSettings()) // Provide mock settings
+            .environmentObject(TimerSettings())
     }
 }
