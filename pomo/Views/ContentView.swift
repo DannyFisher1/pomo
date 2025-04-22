@@ -45,21 +45,10 @@ struct ContentView: View {
             .padding(.top, 25)
             .padding(.bottom)
             .frame(width: 320, height: 500)
+            .overlay(alignment: .topTrailing) {
+                SettingsGearButton(showSettings: $showSettings)
+            }
 
-            Button {
-                showSettings.toggle()
-            } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.callout)
-                    .foregroundColor(.secondary)
-            }
-            .buttonStyle(.plain)
-            .padding(10)
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
-                    .environmentObject(settings)
-                    .fixedSize()
-            }
         }
         .background(
             LinearGradient(
@@ -76,8 +65,34 @@ struct ContentView: View {
             switch settings.colorTheme {
                 case .light: return .light
                 case .dark: return .dark
-                case .system: return nil // Use system default
+                case .system: return nil
             }
         }())
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+                .environmentObject(settings)
+                .fixedSize()
+        }
+    }
+}
+
+struct SettingsGearButton: View {
+    @Binding var showSettings: Bool
+    @State private var isHovered = false
+
+    var body: some View {
+        Button {
+            showSettings.toggle()
+        } label: {
+            Image(systemName: "gearshape.fill")
+                .font(.callout)
+                .foregroundColor(.secondary)
+                .opacity(isHovered ? 1 : 0)
+        }
+        .buttonStyle(.plain)
+        .padding(10)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
