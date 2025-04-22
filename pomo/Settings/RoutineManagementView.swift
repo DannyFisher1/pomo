@@ -11,6 +11,10 @@ struct RoutineManagementView: View {
     // Keep track if we are adding a new one vs editing
     @State private var isAddingNewRoutine: Bool = false
 
+    // State for delete confirmation
+    @State private var showingDeleteConfirmation = false
+    @State private var routineToDelete: Routine? = nil
+
     var body: some View {
         VStack {
             HStack {
@@ -50,9 +54,21 @@ struct RoutineManagementView: View {
                             Image(systemName: "pencil")
                         }
                         .buttonStyle(.plain)
+                        .help("Edit Routine") // Add tooltip
+                        
+                        // Button to delete existing
+                        Button {
+                            routineToDelete = routine // Set routine to delete
+                            showingDeleteConfirmation = true // Show confirmation
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.red) // Make it stand out
+                        .help("Delete Routine") // Add tooltip
                     }
                 }
-                .onDelete(perform: deleteRoutine)
+                .onDelete(perform: deleteRoutineByOffset)
             }
             .listStyle(.inset)
 
@@ -67,17 +83,51 @@ struct RoutineManagementView: View {
         .frame(width: 450, height: 400)
         .sheet(isPresented: $showingEditorSheet, onDismiss: saveChanges) {
             // Pass the binding to the non-optional editor state
+            // Also pass whether we are editing an existing routine - REMOVED
             RoutineEditorView(routine: $routineInEditor)
+               // .environmentObject(settings) // REMOVED
+        }
+        // Add the delete confirmation alert
+        .alert("Delete Routine", isPresented: $showingDeleteConfirmation, presenting: routineToDelete) { routine in
+            Button("Delete", role: .destructive) {
+                confirmDelete(routine: routine)
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: { routine in
+            Text("Are you sure you want to delete the routine \"\(routine.name)? This action cannot be undone.")
         }
     }
     
-    private func deleteRoutine(at offsets: IndexSet) {
+    // Keep swipe-to-delete functionality
+    private func deleteRoutineByOffset(at offsets: IndexSet) {
         var routines = settings.getRoutines()
-        routines.remove(atOffsets: offsets)
+        // Get the routine IDs to delete based on offsets
+        let idsToDelete = offsets.map { routines[$0].id }
+        // Filter out the routines with those IDs
+        routines.removeAll { idsToDelete.contains($0.id) }
         settings.saveRoutines(routines)
+        
+        // Deselect if the active routine was deleted
+        if let activeIdString = settings.selectedRoutineID, 
+           let activeIdUUID = UUID(uuidString: activeIdString), 
+           idsToDelete.contains(activeIdUUID) {
+            settings.selectedRoutineID = nil // Correctly assign nil directly
+        }
     }
     
-    // Called when the sheet dismisses
+    // Function called by the confirmation alert
+    private func confirmDelete(routine: Routine) {
+        var routines = settings.getRoutines()
+        routines.removeAll { $0.id == routine.id }
+        settings.saveRoutines(routines)
+        
+        // Deselect if the active routine was deleted
+        if settings.selectedRoutineID == routine.id.uuidString { // Compare String? and String
+            settings.selectedRoutineID = nil // Correctly assign nil directly
+        }
+    }
+    
+    // Called when the editor sheet dismisses
     private func saveChanges() {
         // Use routineInEditor which is guaranteed non-optional
         let editedRoutine = routineInEditor 

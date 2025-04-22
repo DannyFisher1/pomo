@@ -31,7 +31,7 @@ final class TimerSettings: ObservableObject {
     @AppStorage("playSounds")            var playSounds: Bool         = true
     @AppStorage("showNotifications")     var showNotifications: Bool  = true
     @AppStorage("colorTheme")            var colorTheme: ColorTheme   = .system
-    @AppStorage("completionSoundName")   var completionSoundName: String = "Ping"
+    @AppStorage("completionSoundName")   var completionSoundName: String = "Default"
     @AppStorage("pomodoroIcon") var pomodoroIcon: String = "🍅"
     @AppStorage("shortBreakIcon") var shortBreakIcon: String = "☕️"
     @AppStorage("longBreakIcon") var longBreakIcon: String = "🧘"
@@ -83,7 +83,7 @@ final class TimerSettings: ObservableObject {
     }
 
     // MARK: – Available Sounds
-    let availableSoundNames = ["Ping", "Basso", "Blow", "Bottle", "Frog", "Funk", "Glass", "Hero", "Morse", "Pop", "Purr", "Sosumi", "Submarine", "Tink"]
+    let availableSoundNames = ["Default", "Guitar", "Bongos"]
 
     // MARK: – Theme Enumeration
 
@@ -103,7 +103,7 @@ final class TimerSettings: ObservableObject {
         playSounds          = true
         showNotifications   = true
         colorTheme          = .system
-        completionSoundName = "Ping"
+        completionSoundName = "Default"
         cycleMode           = .pomodoro
         // Reset mode-specific icons
         pomodoroIcon = "🍅"

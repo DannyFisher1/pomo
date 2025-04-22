@@ -10,7 +10,7 @@ struct RoutineEditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
-            Text(routine.id == UUID() ? "Add New Routine" : "Edit Routine") // Check default ID for title
+            Text(routine.name.isEmpty ? "Add New Routine" : "Edit Routine")
                 .font(.title2)
 
             TextField("Routine Name", text: $routine.name)
@@ -50,9 +50,9 @@ struct RoutineEditorView: View {
             Spacer() // Push controls to bottom
 
             HStack {
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Save") { dismiss() } // Dismissal implies save in this binding context
+                Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Save") { dismiss() } // Dismissal implies save in parent's onDismiss
                     .keyboardShortcut(.defaultAction)
                     .disabled(routine.name.isEmpty || routine.steps.isEmpty)
             }
@@ -73,9 +73,17 @@ struct RoutineEditorView: View {
 // Preview provider (optional but helpful)
 struct RoutineEditorView_Previews: PreviewProvider {
     static var previews: some View {
-        StatefulPreviewWrapper(Routine(name: "Preview Routine", steps: [.pomodoro, .shortBreak])) { binding in
+        // Preview for editing
+        StatefulPreviewWrapper(Routine(id: UUID(), name: "Preview Routine", steps: [.pomodoro, .shortBreak])) { binding in
             RoutineEditorView(routine: binding)
         }
+        .previewDisplayName("Editing Existing")
+
+        // Preview for adding new
+        StatefulPreviewWrapper(Routine(id: UUID(), name: "", steps: [])) { binding in
+            RoutineEditorView(routine: binding)
+        }
+        .previewDisplayName("Adding New")
     }
 }
 

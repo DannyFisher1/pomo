@@ -58,7 +58,6 @@ struct RingTimerView: View {
                     .font(.system(size: 40, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundColor(.primary)
-                    .contentTransition(.numericText())
                 
                 Text("remaining")
                     .font(.system(size: 10))

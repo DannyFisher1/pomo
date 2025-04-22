@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Combine
 import AppKit // Import AppKit for NSSound
+import UserNotifications // Import UserNotifications
 
 class PomodoroManager: ObservableObject {
     @Published var timeRemaining: Int
@@ -181,6 +182,121 @@ class PomodoroManager: ObservableObject {
         }
     }
 
+    // MARK: - Notification Content
+    private let pomodoroDoneMessages = [
+        "Pomodoro done! Did you actually work, or just stare blankly?",
+        "Time’s up! Your brain might be slightly less scrambled now.",
+        "Focus session complete. Remember what you were doing? Me neither.",
+        "That’s one Pomodoro down. Only a million more to go.",
+        "Ding! You survived another Pomodoro. Reward yourself (briefly).",
+        "Congrats, you sat still for 25 minutes. Champagne time.",
+        "Pomodoro complete: your procrastination skills remain unparalleled.",
+        "Well, that sucked. But hey, it’s over.",
+        "You’re still breathing—success!",
+        "25 minutes of faux productivity achieved.",
+        "Pomodoro done. Your coffee addiction thanks you.",
+        "One more Pomodoro: because misery loves company.",
+        "Tick tock, you survived the clock.",
+        "You worked? Or did you just think about working?",
+        "Session finished. Your snack drawer is calling.",
+        "High five! Now go stare at something else for 5 seconds.",
+        "Pomodoro complete. The void salutes your effort.",
+        "Session over. You can now justify a nap (don’t).",
+        "Another Pomodoro bites the dust. You monster.",
+        "Listen I wont tell them you just sat there for 25 minutes",
+        "Mission accomplished: deadlines still looming, though.",
+        "Pomodoro done. Your therapist will be proud.",
+        "25 minutes later and you still haven’t cured boredom.",
+        "Pomodoro wrapped—your existential dread remains intact."
+    ]
+
+    private let shortBreakDoneMessages = [
+        "Break’s over! Back to the digital salt mines.",
+        "Hope you enjoyed that brief escape. Reality awaits.",
+        "Short break finished. Was it enough? Probably not.",
+        "Okay, fun time is over. Pretend to be productive again!",
+        "That was short, wasn’t it? Just like my patience.",
+        "Break ended. Your snack is gone, too.",
+        "Time to trade dopamine for despair again.",
+        "Short break: accomplished. Burnout: incoming.",
+        "Break over. Your inbox didn’t pray for mercy.",
+        "Hope that nap was worth it. Now get back to hell.",
+        "30 seconds of joy down the drain.",
+        "Break time’s up. Dreams of vacation shattered.",
+        "Back to work—you masochist.",
+        "Enjoy the post-break regret.",
+        "Short break done: your chair misses you already.",
+        "Break’s over! That stretch won’t hold itself.",
+        "Snack break ended. Crumbs now your new habitat.",
+        "Short break complete. Your guilt called—it wants more.",
+        "Time to put the ‘ugh’ back in ‘lunch’—just kidding, it wasn’t lunch.",
+        "Break finished. Your plants still won’t water themselves.",
+        "Short break done. You can now stare blankly again.",
+        "Break’s over. Your spine regrets this already.",
+        "Back to work: your keyboard misses the crumbs.",
+        "Short break concluded. Your sanity? Debatable."
+    ]
+
+    private let longBreakDoneMessages = [
+        "Long break finished. Ease back in—don’t shock the system.",
+        "Welcome back from your mini-vacation. Did you miss me?",
+        "Hope that was restful! Now, about that looming deadline…",
+        "Long break complete. Time to slowly ramp up… or just panic.",
+        "Aaand you’re back in the room. Let’s do this (or procrastinate).",
+        "Long break over. Your ambitions are still on holiday.",
+        "You came back? Impressive lack of self-respect.",
+        "Welcome back to the grind—your therapist called.",
+        "Long break: checked. Existential dread: loading.",
+        "Hope you didn’t actually relax. Now suffer productively.",
+        "Back to work—you glorious glutton for punishment.",
+        "Long break ended. The void stares back at you.",
+        "Well, that was a waste of time. Ready for more?",
+        "You survived that long break. Congratulations, I guess.",
+        "Long break complete. Your motivation is MIA.",
+        "Holiday’s over. The real world’s resume is pending.",
+        "Long break done. Your guilt never left.",
+        "Back in action—by ‘action’ I mean ‘endless emails.’",
+        "Break’s over. Your chair’s wheels are mocking you.",
+        "Long break: expired. Reality: restocked.",
+        "Re-entry successful. Now feel the crushing weight of tasks.",
+        "Long break concluded. Your inbox threw a party.",
+        "You rested for too long. Now panic accordingly.",
+        "Break over. Procrastination’s back on stage."
+    ]
+
+
+    private func sendCompletionNotification(mode: TimerMode) {
+        let content = UNMutableNotificationContent()
+        var bodyMessage = ""
+
+        switch mode {
+        case .pomodoro:
+            content.title = "Pomodoro Finished!"
+            bodyMessage = pomodoroDoneMessages.randomElement() ?? "Time for a break!"
+        case .shortBreak:
+            content.title = "Short Break Over!"
+            bodyMessage = shortBreakDoneMessages.randomElement() ?? "Back to work!"
+        case .longBreak:
+            content.title = "Long Break Finished!"
+            bodyMessage = longBreakDoneMessages.randomElement() ?? "Time to focus again!"
+        }
+        content.body = bodyMessage
+        content.sound = UNNotificationSound(named: UNNotificationSoundName(timerSettings.completionSoundName + ".mp3")) // Use the selected sound file
+
+        // Create the request
+        let uuidString = UUID().uuidString
+        let request = UNNotificationRequest(identifier: uuidString,
+                                            content: content,
+                                            trigger: nil) // nil trigger = deliver immediately
+
+        // Schedule the request
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            }
+        }
+    }
+    
     private func finishCycle() {
         if timerSettings.playSounds {
             let soundName = timerSettings.completionSoundName
@@ -215,6 +331,11 @@ class PomodoroManager: ObservableObject {
             if self.timeRemaining == 0 && !self.isRunning {
                 self.autoCycle()
             }
+        }
+
+        // Send notification if enabled
+        if timerSettings.showNotifications {
+            sendCompletionNotification(mode: finishedMode)
         }
     }
 
