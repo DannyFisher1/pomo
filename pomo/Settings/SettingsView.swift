@@ -24,58 +24,107 @@ struct TimeComponents: Equatable { // Conformance needed for onChange checks
     var timeInterval: TimeInterval {
         TimeInterval(hours * 3600 + minutes * 60 + seconds)
     }
+    
+    // Helper to format the duration string
+    func formattedString() -> String {
+        var components: [String] = []
+        if hours > 0 {
+            components.append("\(hours)h")
+        }
+        if minutes > 0 || hours > 0 { // Show minutes if hours are shown or if minutes > 0
+             components.append("\(minutes)m")
+        }
+         // Always show seconds if non-zero, or if it's the only unit
+        if seconds > 0 || components.isEmpty {
+            components.append("\(seconds)s")
+        }
+        return components.joined(separator: " ").isEmpty ? "0s" : components.joined(separator: " ")
+    }
 }
 
-// Reusable View for H:M:S Picker
-struct TimeDurationPicker: View {
+// --- New Views for Elegant Duration Editing ---
+
+// 1. Row View to Display Duration and Trigger Sheet
+struct TimeDurationDisplayRow: View {
     let label: String
     let icon: String
     @Binding var duration: TimeInterval
-    @State private var components: TimeComponents
+    @State private var showingEditSheet = false
 
-    // Define reasonable ranges
+    var body: some View {
+        HStack {
+            Label(label, systemImage: icon)
+            Spacer()
+            Text(TimeComponents(timeInterval: duration).formattedString())
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .contentShape(Rectangle()) // Make entire row tappable
+        .onTapGesture {
+            showingEditSheet = true
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            TimeDurationEditSheet(duration: $duration, label: label)
+        }
+    }
+}
+
+// 2. Sheet View for Editing with Pickers
+struct TimeDurationEditSheet: View {
+    @Binding var duration: TimeInterval
+    let label: String // Pass label for context
+    @Environment(\.dismiss) private var dismiss
+
+    // Temporary state for pickers
+    @State private var tempComponents: TimeComponents
+
+    // Ranges
     private let hourRange = 0...23
     private let minuteSecondRange = 0...59
 
-    init(label: String, icon: String, duration: Binding<TimeInterval>) {
-        self.label = label
-        self.icon = icon
+    init(duration: Binding<TimeInterval>, label: String) {
         self._duration = duration
-        // Initialize state based on the binding's initial value
-        self._components = State(initialValue: TimeComponents(timeInterval: duration.wrappedValue))
+        self.label = label
+        // Initialize temporary state from the binding
+        self._tempComponents = State(initialValue: TimeComponents(timeInterval: duration.wrappedValue))
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 20) {
+            Text("Set Duration for \(label)")
+                .font(.headline)
+
+            HStack(spacing: 5) {
+                picker(value: $tempComponents.hours, range: hourRange, unit: "h")
+                picker(value: $tempComponents.minutes, range: minuteSecondRange, unit: "m")
+                picker(value: $tempComponents.seconds, range: minuteSecondRange, unit: "s")
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+            .background(.black.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
             HStack {
-                Label(label, systemImage: icon)
-                Spacer()
-                // Pickers for H, M, S
-                HStack(spacing: 2) {
-                    picker(value: $components.hours, range: hourRange, unit: "h")
-                    picker(value: $components.minutes, range: minuteSecondRange, unit: "m")
-                    picker(value: $components.seconds, range: minuteSecondRange, unit: "s")
+                Button("Cancel") {
+                    dismiss()
                 }
-                .frame(maxWidth: 180) // Adjust width as needed
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            Divider().padding(.leading, 40)
-        }
-        .onChange(of: components.hours) { _, _ in updateDuration() }
-        .onChange(of: components.minutes) { _, _ in updateDuration() }
-        .onChange(of: components.seconds) { _, _ in updateDuration() }
-        // Ensure the pickers update if the binding changes externally
-        .onChange(of: duration) { _, newValue in
-            let newComponents = TimeComponents(timeInterval: newValue)
-            // Use Equatable conformance for simpler check
-            if newComponents != components { // Avoid update loops
-                components = newComponents
+                .buttonStyle(.plain) // Less prominent cancel
+                
+                Spacer()
+                
+                Button("Set") {
+                    duration = tempComponents.timeInterval // Update binding
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent) // Prominent set button
             }
         }
+        .padding()
+        .frame(minWidth: 300)
     }
 
-    // Helper for individual picker views
+    // Reusable picker helper (similar to before)
     @ViewBuilder
     private func picker(value: Binding<Int>, range: ClosedRange<Int>, unit: String) -> some View {
         HStack(spacing: 1) {
@@ -84,22 +133,14 @@ struct TimeDurationPicker: View {
                     Text("\(num)").tag(num)
                 }
             }
+            .pickerStyle(.menu)
             .labelsHidden()
-            .frame(minWidth: 35) // Give pickers some minimum width
-            .clipped() // Prevents text overlap on narrow widths
+            .frame(minWidth: 45) // Give pickers slightly more width in the sheet
+            .clipped()
+            
             Text(unit)
                 .font(.caption)
                 .foregroundColor(.secondary)
-        }
-    }
-
-    // Update the TimeInterval binding when components change
-    private func updateDuration() {
-        // Ensure components don't represent the same time interval already set
-        // to prevent potential infinite loops if the binding update triggers onChange
-        let newInterval = components.timeInterval
-        if abs(duration - newInterval) > 0.001 { // Use tolerance for floating point comparison
-             duration = newInterval
         }
     }
 }
@@ -164,11 +205,13 @@ struct SettingsView: View {
     
     private var contentView: some View {
         VStack(spacing: 20) {
-            // Timer Durations - Updated to use TimeDurationPicker
+            // Timer Durations - Updated to use TimeDurationDisplayRow
             section(title: "Timer Durations") {
-                TimeDurationPicker(label: "Pomodoro", icon: "timer", duration: $settings.pomodoroDuration)
-                TimeDurationPicker(label: "Short Break", icon: "cup.and.saucer", duration: $settings.shortBreakDuration)
-                TimeDurationPicker(label: "Long Break", icon: "moon.zzz", duration: $settings.longBreakDuration)
+                TimeDurationDisplayRow(label: "Pomodoro", icon: "timer", duration: $settings.pomodoroDuration)
+                Divider().padding(.leading, 40) // Add divider between rows
+                TimeDurationDisplayRow(label: "Short Break", icon: "cup.and.saucer", duration: $settings.shortBreakDuration)
+                Divider().padding(.leading, 40)
+                TimeDurationDisplayRow(label: "Long Break", icon: "moon.zzz", duration: $settings.longBreakDuration)
             }
             
             // Behavior
