@@ -5,7 +5,7 @@ import AppKit // Import AppKit for NSSound & windows
 // import UserNotifications // No longer needed for custom alerts
 
 class PomodoroManager: ObservableObject {
-    @Published var timeRemaining: Int
+    @Published var timeRemaining: TimeInterval
     @Published var currentMode: TimerMode = .pomodoro
     @Published var isRunning = false
     @Published var completedPomodoros = 0 // Keeps track of total pomodoros completed
@@ -14,7 +14,7 @@ class PomodoroManager: ObservableObject {
     @Published var currentStepIndex: Int = 0 // Track position in the routine
 
     private var timer: Timer?
-    var originalDuration: Int = 0
+    var originalDuration: TimeInterval = 0
     private let timerSettings: TimerSettings
     private var settingsCancellable: AnyCancellable?
     private var currentRoutine: Routine?
@@ -36,14 +36,14 @@ class PomodoroManager: ObservableObject {
         self.currentMode = initialMode
 
         // Calculate initial duration DIRECTLY without calling instance method
-        let initialDuration: Int
+        let initialDuration: TimeInterval
         switch initialMode {
         case .pomodoro:
-            initialDuration = timerSettings.pomodoroMinutes * 60
+            initialDuration = timerSettings.pomodoroDuration
         case .shortBreak:
-            initialDuration = timerSettings.shortBreakMinutes * 60
+            initialDuration = timerSettings.shortBreakDuration
         case .longBreak:
-            initialDuration = timerSettings.longBreakMinutes * 60
+            initialDuration = timerSettings.longBreakDuration
         }
         // Now assign properties
         self.timeRemaining = initialDuration
@@ -97,14 +97,14 @@ class PomodoroManager: ObservableObject {
             }
     }
 
-    private func duration(for mode: TimerMode) -> Int {
+    private func duration(for mode: TimerMode) -> TimeInterval {
         switch mode {
         case .pomodoro:
-            return timerSettings.pomodoroMinutes * 60
+            return timerSettings.pomodoroDuration
         case .shortBreak:
-            return timerSettings.shortBreakMinutes * 60
+            return timerSettings.shortBreakDuration
         case .longBreak:
-            return timerSettings.longBreakMinutes * 60
+            return timerSettings.longBreakDuration
         }
     }
 
@@ -112,7 +112,7 @@ class PomodoroManager: ObservableObject {
         // Logic to ensure durations are correct before starting remains similar
         let currentModeDuration = duration(for: currentMode)
         // Ensure originalDuration is set correctly if timer was reset or is starting fresh
-        if !isRunning && (timeRemaining == originalDuration || timeRemaining == 0) {
+        if !isRunning && (abs(timeRemaining - originalDuration) < 0.001 || timeRemaining <= 0) {
              originalDuration = currentModeDuration
              timeRemaining = currentModeDuration
         }
@@ -173,9 +173,9 @@ class PomodoroManager: ObservableObject {
     }
 
     private func tick() {
-        if timeRemaining > 1 {
+        if timeRemaining > 1.0 {
             timeRemaining -= 1
-        } else if timeRemaining == 1 {
+        } else {
             timeRemaining = 0
             pause()
             finishCycle()
@@ -411,7 +411,7 @@ class PomodoroManager: ObservableObject {
 
             // Increment total counts based on the captured finished mode
             // Ensure timer is still at 0 before incrementing (in case of rapid manual intervention)
-            if self.timeRemaining == 0 {
+            if abs(self.timeRemaining) < 0.001 {
                 switch finishedMode { // Use the captured mode
                 case .pomodoro: self.completedPomodoros += 1
                 case .shortBreak: self.completedShortBreaks += 1
@@ -421,11 +421,13 @@ class PomodoroManager: ObservableObject {
 
             // Check Operating Mode before deciding whether to auto-start
             guard self.timerSettings.operatingMode != .single else {
+                // Reset time to 0 if it wasn't already, just to be safe
+                self.timeRemaining = 0
                 return // Stop here
             }
 
             // Proceed if mode is .cycle or .routine and timer finished correctly
-            if self.timeRemaining == 0 && !self.isRunning {
+            if abs(self.timeRemaining) < 0.001 && !self.isRunning {
                 self.autoCycle()
             }
         }

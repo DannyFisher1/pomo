@@ -1,6 +1,109 @@
 import SwiftUI
 import AppKit
 
+// Helper struct to manage H:M:S components
+struct TimeComponents: Equatable { // Conformance needed for onChange checks
+    var hours: Int = 0
+    var minutes: Int = 0
+    var seconds: Int = 0
+
+    init(timeInterval: TimeInterval) {
+        guard timeInterval >= 0 else {
+            // Handle negative intervals if necessary, defaulting to 0
+            self.hours = 0
+            self.minutes = 0
+            self.seconds = 0
+            return
+        }
+        let totalSeconds = Int(timeInterval)
+        hours = totalSeconds / 3600
+        minutes = (totalSeconds % 3600) / 60
+        seconds = totalSeconds % 60
+    }
+
+    var timeInterval: TimeInterval {
+        TimeInterval(hours * 3600 + minutes * 60 + seconds)
+    }
+}
+
+// Reusable View for H:M:S Picker
+struct TimeDurationPicker: View {
+    let label: String
+    let icon: String
+    @Binding var duration: TimeInterval
+    @State private var components: TimeComponents
+
+    // Define reasonable ranges
+    private let hourRange = 0...23
+    private let minuteSecondRange = 0...59
+
+    init(label: String, icon: String, duration: Binding<TimeInterval>) {
+        self.label = label
+        self.icon = icon
+        self._duration = duration
+        // Initialize state based on the binding's initial value
+        self._components = State(initialValue: TimeComponents(timeInterval: duration.wrappedValue))
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Label(label, systemImage: icon)
+                Spacer()
+                // Pickers for H, M, S
+                HStack(spacing: 2) {
+                    picker(value: $components.hours, range: hourRange, unit: "h")
+                    picker(value: $components.minutes, range: minuteSecondRange, unit: "m")
+                    picker(value: $components.seconds, range: minuteSecondRange, unit: "s")
+                }
+                .frame(maxWidth: 180) // Adjust width as needed
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            Divider().padding(.leading, 40)
+        }
+        .onChange(of: components.hours) { _, _ in updateDuration() }
+        .onChange(of: components.minutes) { _, _ in updateDuration() }
+        .onChange(of: components.seconds) { _, _ in updateDuration() }
+        // Ensure the pickers update if the binding changes externally
+        .onChange(of: duration) { _, newValue in
+            let newComponents = TimeComponents(timeInterval: newValue)
+            // Use Equatable conformance for simpler check
+            if newComponents != components { // Avoid update loops
+                components = newComponents
+            }
+        }
+    }
+
+    // Helper for individual picker views
+    @ViewBuilder
+    private func picker(value: Binding<Int>, range: ClosedRange<Int>, unit: String) -> some View {
+        HStack(spacing: 1) {
+            Picker("", selection: value) {
+                ForEach(range, id: \.self) { num in
+                    Text("\(num)").tag(num)
+                }
+            }
+            .labelsHidden()
+            .frame(minWidth: 35) // Give pickers some minimum width
+            .clipped() // Prevents text overlap on narrow widths
+            Text(unit)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    // Update the TimeInterval binding when components change
+    private func updateDuration() {
+        // Ensure components don't represent the same time interval already set
+        // to prevent potential infinite loops if the binding update triggers onChange
+        let newInterval = components.timeInterval
+        if abs(duration - newInterval) > 0.001 { // Use tolerance for floating point comparison
+             duration = newInterval
+        }
+    }
+}
+
 struct SettingsView: View {
     @EnvironmentObject private var settings: TimerSettings
     @Environment(\.dismiss) private var dismiss
@@ -61,11 +164,11 @@ struct SettingsView: View {
     
     private var contentView: some View {
         VStack(spacing: 20) {
-            // Timer Durations
+            // Timer Durations - Updated to use TimeDurationPicker
             section(title: "Timer Durations") {
-                settingRow(icon: "timer", label: "Pomodoro", value: $settings.pomodoroMinutes, range: 1...90)
-                settingRow(icon: "cup.and.saucer", label: "Short Break", value: $settings.shortBreakMinutes, range: 1...30)
-                settingRow(icon: "moon.zzz", label: "Long Break", value: $settings.longBreakMinutes, range: 1...60)
+                TimeDurationPicker(label: "Pomodoro", icon: "timer", duration: $settings.pomodoroDuration)
+                TimeDurationPicker(label: "Short Break", icon: "cup.and.saucer", duration: $settings.shortBreakDuration)
+                TimeDurationPicker(label: "Long Break", icon: "moon.zzz", duration: $settings.longBreakDuration)
             }
             
             // Behavior
@@ -323,23 +426,6 @@ struct SettingsView: View {
             }
             .background(.secondary.opacity(0.05))
             .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-    }
-    
-    private func settingRow(icon: String, label: String, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
-        VStack(spacing: 0) {
-            HStack {
-                Label(label, systemImage: icon)
-                Spacer()
-                Stepper("", value: value, in: range)
-                    .labelsHidden()
-                Text("\(value.wrappedValue) min")
-                    .frame(width: 60, alignment: .trailing)
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            Divider()
-                .padding(.leading, 40)
         }
     }
     

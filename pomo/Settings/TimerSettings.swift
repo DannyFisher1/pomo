@@ -24,9 +24,9 @@ final class TimerSettings: ObservableObject {
     }
 
     // MARK: – Persisted Settings
-    @AppStorage("pomodoroMinutes")       var pomodoroMinutes: Int     = 25
-    @AppStorage("shortBreakMinutes")     var shortBreakMinutes: Int   = 5
-    @AppStorage("longBreakMinutes")      var longBreakMinutes: Int    = 15
+    @AppStorage("pomodoroDuration")      var pomodoroDuration: TimeInterval = 25 * 60
+    @AppStorage("shortBreakDuration")    var shortBreakDuration: TimeInterval = 5 * 60
+    @AppStorage("longBreakDuration")     var longBreakDuration: TimeInterval = 15 * 60
 
     @AppStorage("playSounds")            var playSounds: Bool         = true
     @AppStorage("showNotifications")     var showNotifications: Bool  = true
@@ -101,22 +101,19 @@ final class TimerSettings: ObservableObject {
 
     // MARK: – Reset
     func resetToDefaults() {
-        pomodoroMinutes     = 25
-        shortBreakMinutes   = 5
-        longBreakMinutes    = 15
+        pomodoroDuration    = 25 * 60
+        shortBreakDuration  = 5 * 60
+        longBreakDuration   = 15 * 60
         playSounds          = true
         showNotifications   = true
         colorTheme          = .system
         completionSoundName = "Default"
         cycleMode           = .pomodoro
-        // Reset notification settings
         notificationScale = 1.0
         notificationDuration = 3.5
-        // Reset mode-specific icons
         pomodoroIcon = "🍅"
         shortBreakIcon = "☕️"
         longBreakIcon = "🧘"
-        // Reset routines
         saveRoutines(TimerSettings.defaultRoutines())
     }
 }

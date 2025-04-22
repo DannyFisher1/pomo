@@ -1,17 +1,28 @@
 import SwiftUI
 
 struct RingTimerView: View {
-    @Binding var timeRemaining: Int
-    let totalTime: Int
+    @Binding var timeRemaining: TimeInterval
+    let totalTime: TimeInterval
     let color: Color
 
     var progress: CGFloat {
-        let rawProgress = 1 - (CGFloat(timeRemaining) / CGFloat(max(1, totalTime)))
+        let rawProgress = 1 - (CGFloat(timeRemaining) / CGFloat(max(1.0, totalTime)))
         return max(0, min(1, rawProgress))
     }
 
-    var minutes: Int { timeRemaining / 60 }
-    var seconds: Int { timeRemaining % 60 }
+    // Calculate hours, minutes (0-59), and seconds (0-59) from TimeInterval
+    var hours: Int { Int(timeRemaining) / 3600 }
+    var minutes: Int { (Int(timeRemaining) % 3600) / 60 }
+    var seconds: Int { Int(timeRemaining) % 60 }
+
+    // Computed property for the formatted time string
+    var formattedTimeString: String {
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            return String(format: "%02d:%02d", minutes, seconds)
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -52,12 +63,13 @@ struct RingTimerView: View {
 
             // Time display
             VStack(spacing: 2) {
-                Text("\(String(format: "%02d", minutes)):\(String(format: "%02d", seconds))")
-                    .font(.system(size: 40, weight: .bold, design: .monospaced))
+                // Use a single Text view with the computed formatted string
+                Text(formattedTimeString)
+                    // Apply modifiers directly to this Text view
+                    .font(.system(size: 32, weight: .bold, design: .monospaced))
                     .monospacedDigit()
-                    .frame(width: 130, alignment: .center)
-                    .multilineTextAlignment(.center)
-                    .fixedSize()
+                    .lineLimit(1) // Ensure single line
+                    .minimumScaleFactor(0.7) // Allow shrinking if needed
                     .layoutPriority(1)
                     .foregroundColor(.primary)
                 

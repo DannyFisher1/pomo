@@ -52,9 +52,17 @@ class StatusBarController {
     private func updateStatusIcon() {
         guard let button = statusItem.button else { return }
 
-        let m = manager.timeRemaining / 60
-        let s = manager.timeRemaining % 60
-        let formattedTime = String(format: "%02d:%02d", m, s)
+        let timeRemaining = manager.timeRemaining
+        let hours = Int(timeRemaining) / 3600
+        let minutes = (Int(timeRemaining) % 3600) / 60
+        let seconds = Int(timeRemaining.truncatingRemainder(dividingBy: 60))
+        
+        let formattedTime: String
+        if hours > 0 {
+            formattedTime = String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            formattedTime = String(format: "%02d:%02d", minutes, seconds)
+        }
 
         let currentIcon: String
         switch manager.currentMode {
