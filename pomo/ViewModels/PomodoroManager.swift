@@ -12,6 +12,7 @@ class PomodoroManager: ObservableObject {
     @Published var completedShortBreaks = 0 // Add short break counter
     @Published var completedLongBreaks = 0 // Add long break counter
     @Published var currentStepIndex: Int = 0 // Track position in the routine
+    @Published var didPerformFullReset: Bool = false // Signal for animation
 
     private var timer: Timer?
     var originalDuration: TimeInterval = 0
@@ -468,6 +469,14 @@ class PomodoroManager: ObservableObject {
     func resetFullCycle() {
         pause()
         print("Executing full reset logic...")
+
+        // --- Trigger Animation Signal --- 
+        didPerformFullReset = true
+        // Reset the signal after a short delay (long enough for animation)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            self.didPerformFullReset = false
+        }
+        // --------------------------------
 
         // Reset counters (optional, depending on desired behavior)
         // completedPomodoros = 0

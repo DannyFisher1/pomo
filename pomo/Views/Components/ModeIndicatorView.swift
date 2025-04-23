@@ -6,8 +6,11 @@ struct ModeIndicatorView: View {
     let routine: Routine?
     let currentStepIndex: Int
 
+    @EnvironmentObject var manager: PomodoroManager
+
     @State private var showRoutineDetails = false
     @State private var showFullList = false
+    @State private var isAnimatingReset = false
 
     private var statusText: String {
         switch operatingMode {
@@ -65,6 +68,9 @@ struct ModeIndicatorView: View {
                     .padding(.horizontal, 16)
                     .background(mode.color.opacity(0.1))
                     .clipShape(Capsule())
+                    .scaleEffect(isAnimatingReset ? 1.1 : 1.0)
+                    .opacity(isAnimatingReset ? 0.6 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.4), value: isAnimatingReset)
 
                     if let next = nextStepText {
                         Text(next)
@@ -108,6 +114,14 @@ struct ModeIndicatorView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .shadow(radius: 3)
                 .frame(maxWidth: 250)
+            }
+        }
+        .onChange(of: manager.didPerformFullReset) { _, newValue in
+            if newValue {
+                isAnimatingReset = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isAnimatingReset = false
+                }
             }
         }
     }
