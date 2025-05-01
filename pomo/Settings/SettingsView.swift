@@ -151,6 +151,10 @@ struct SettingsView: View {
     @State private var showingRoutineManager = false
     @State private var contentSize: CGSize = .zero
     
+    // State to manage which custom color picker is shown (if any)
+    @State private var currentlyPickingColorFor: TimerMode? = nil
+    
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -170,6 +174,8 @@ struct SettingsView: View {
                                        }
                         }
                     )
+
+                   
             }
             .frame(maxHeight: calculateMaxHeight())
             
@@ -182,6 +188,17 @@ struct SettingsView: View {
         .sheet(isPresented: $showingRoutineManager) {
             RoutineManagementView()
                 .environmentObject(settings)
+        }
+        .sheet(item: $currentlyPickingColorFor) { mode in
+            // Present the NEW ModernColorPickerView
+            switch mode {
+            case .pomodoro:
+                ModernColorPickerView(selectedColor: $settings.pomodoroColor)
+            case .shortBreak:
+                ModernColorPickerView(selectedColor: $settings.shortBreakColor)
+            case .longBreak:
+                ModernColorPickerView(selectedColor: $settings.longBreakColor)
+            }
         }
     }
     
@@ -380,10 +397,21 @@ struct SettingsView: View {
                 
                 Divider().padding(.leading, 40) // Separator
                 
-                // Custom Color Pickers (New)
-                colorPickerRow(label: "Pomodoro Color", selection: $settings.pomodoroColor)
-                colorPickerRow(label: "Short Break Color", selection: $settings.shortBreakColor)
-                colorPickerRow(label: "Long Break Color", selection: $settings.longBreakColor)
+                // Use ColorSwatchRow instead of colorPickerRow
+                ColorSwatchRow(label: "Pomodoro Color", selectedColor: $settings.pomodoroColor) {
+                    currentlyPickingColorFor = .pomodoro
+                }
+                ColorSwatchRow(label: "Short Break Color", selectedColor: $settings.shortBreakColor) {
+                    currentlyPickingColorFor = .shortBreak
+                }
+                ColorSwatchRow(label: "Long Break Color", selectedColor: $settings.longBreakColor) {
+                    currentlyPickingColorFor = .longBreak
+                }
+                
+                Divider().padding(.leading, 40) // Separator
+                
+                // Update toggle for hover setting
+                toggleRow(icon: "eye.slash", label: "Hover for Settings Icon", isOn: $settings.showSettingsIconOnHoverOnly)
             }
         }
     }
@@ -528,18 +556,6 @@ struct SettingsView: View {
          .padding(.vertical, 8)
          .padding(.horizontal, 12)
      }
-
-    // New: Reusable Color Picker Row
-    private func colorPickerRow(label: String, selection: Binding<Color>) -> some View {
-        HStack {
-            Text(label)
-            Spacer()
-            ColorPicker("", selection: selection, supportsOpacity: false)
-                .labelsHidden()
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
-    }
 }
 
 struct SettingsView_Previews: PreviewProvider {

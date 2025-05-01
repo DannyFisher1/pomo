@@ -77,6 +77,7 @@ struct ContentView: View {
 struct SettingsGearButton: View {
     // Receive the notification name
     let notificationName: Notification.Name
+    @EnvironmentObject var settings: TimerSettings
     @State private var isHovered = false
 
     var body: some View {
@@ -87,7 +88,8 @@ struct SettingsGearButton: View {
             Image(systemName: "gearshape.fill")
                 .font(.callout)
                 .foregroundColor(.secondary)
-                .opacity(isHovered ? 1 : 0)
+                // Opacity logic: Hide only if hover-only is ON AND not hovering
+                .opacity(settings.showSettingsIconOnHoverOnly && !isHovered ? 0 : 1)
         }
         .buttonStyle(.plain)
         .padding(10)

@@ -36,6 +36,9 @@ final class TimerSettings: ObservableObject {
     @AppStorage("shortBreakIcon") var shortBreakIcon: String = "☕️"
     @AppStorage("longBreakIcon") var longBreakIcon: String = "🧘"
 
+    // MARK: - UI Behavior Settings
+    @AppStorage("showSettingsIconOnHoverOnly") var showSettingsIconOnHoverOnly: Bool = false
+
     // MARK: - Custom Colors (New)
     @AppStorage("pomodoroColorData") private var pomodoroColorData: Data = Color.red.encoded()
     @AppStorage("shortBreakColorData") private var shortBreakColorData: Data = Color.green.encoded()
@@ -106,7 +109,7 @@ final class TimerSettings: ObservableObject {
     }
 
     // MARK: – Available Sounds
-    let availableSoundNames = ["Default", "Guitar", "Bongos"]
+    let availableSoundNames = ["Default", "Guitar", "Bongos", "Italian"]
 
     // MARK: – Theme Enumeration
 
@@ -138,6 +141,8 @@ final class TimerSettings: ObservableObject {
         pomodoroColor = .red
         shortBreakColor = .green
         longBreakColor = .blue
+        // Reset UI Behavior Settings
+        showSettingsIconOnHoverOnly = false // Default FALSE
     }
     
     // Helper function to get color for a specific mode (New)
