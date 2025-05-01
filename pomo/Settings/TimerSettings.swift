@@ -36,6 +36,25 @@ final class TimerSettings: ObservableObject {
     @AppStorage("shortBreakIcon") var shortBreakIcon: String = "☕️"
     @AppStorage("longBreakIcon") var longBreakIcon: String = "🧘"
 
+    // MARK: - Custom Colors (New)
+    @AppStorage("pomodoroColorData") private var pomodoroColorData: Data = Color.red.encoded()
+    @AppStorage("shortBreakColorData") private var shortBreakColorData: Data = Color.green.encoded()
+    @AppStorage("longBreakColorData") private var longBreakColorData: Data = Color.blue.encoded()
+
+    // Computed properties to get/set Color values
+    var pomodoroColor: Color {
+        get { Color(encodedData: pomodoroColorData) ?? .red }
+        set { pomodoroColorData = newValue.encoded() }
+    }
+    var shortBreakColor: Color {
+        get { Color(encodedData: shortBreakColorData) ?? .green }
+        set { shortBreakColorData = newValue.encoded() }
+    }
+    var longBreakColor: Color {
+        get { Color(encodedData: longBreakColorData) ?? .blue }
+        set { longBreakColorData = newValue.encoded() }
+    }
+
     // MARK: - Custom Notification Settings
     @AppStorage("notificationScale") var notificationScale: Double = 1.0 // Scale factor (e.g., 0.8 to 1.5)
     @AppStorage("notificationDuration") var notificationDuration: Double = 3.5 // Duration in seconds (e.g., 2.0 to 10.0)
@@ -115,6 +134,46 @@ final class TimerSettings: ObservableObject {
         shortBreakIcon = "☕️"
         longBreakIcon = "🧘"
         saveRoutines(TimerSettings.defaultRoutines())
+        // Reset custom colors (New)
+        pomodoroColor = .red
+        shortBreakColor = .green
+        longBreakColor = .blue
+    }
+    
+    // Helper function to get color for a specific mode (New)
+    func color(for mode: TimerMode) -> Color {
+        switch mode {
+        case .pomodoro: return pomodoroColor
+        case .shortBreak: return shortBreakColor
+        case .longBreak: return longBreakColor
+        }
+    }
+}
+
+// Helper extension to encode/decode Color for AppStorage
+extension Color {
+    func encoded() -> Data {
+        do {
+            let data = try NSKeyedArchiver.archivedData(withRootObject: NSColor(self), requiringSecureCoding: false)
+            return data
+        } catch {
+            print("Error encoding color: \\(error)")
+            return Data() // Return empty data on failure
+        }
+    }
+
+    init?(encodedData: Data) {
+        guard !encodedData.isEmpty else { return nil }
+        do {
+            if let nsColor = try NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: encodedData) {
+                self = Color(nsColor)
+            } else {
+                return nil
+            }
+        } catch {
+            print("Error decoding color: \\(error)")
+            return nil
+        }
     }
 }
 

@@ -15,14 +15,6 @@ enum TimerMode: String, CaseIterable, Identifiable, Codable {
         }
     }
     
-    var color: Color {
-        switch self {
-        case .pomodoro: return .red
-        case .shortBreak: return .green
-        case .longBreak: return .blue
-        }
-    }
-    
     var icon: String {
         switch self {
         case .pomodoro: return "timer"

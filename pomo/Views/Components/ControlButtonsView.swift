@@ -9,6 +9,7 @@ import SwiftUI
 // Extracted Label for easier gesture application and state management
 struct ResetButtonLabelView: View {
     @EnvironmentObject var manager: PomodoroManager
+    @EnvironmentObject var settings: TimerSettings
     @State private var isPressing = false
     @State private var longPressTimer: Timer? = nil
     @State private var longPressProgress: CGFloat = 0.0 // 0.0 to 1.0
@@ -43,14 +44,14 @@ struct ResetButtonLabelView: View {
         .overlay(
             // Completion effect: quick outline flash
             RoundedRectangle(cornerRadius: 8)
-                .stroke(manager.currentMode.color.opacity(0.8), lineWidth: 3) // Use mode color, slightly thicker
+                .stroke(settings.color(for: manager.currentMode).opacity(0.8), lineWidth: 3) // Use settings color
                 .scaleEffect(showCompletionEffect ? 1.0 : 1.0) // Slight expansion
                 .opacity(showCompletionEffect ? 1 : 0)
                 .animation(.spring(response: 0.3, dampingFraction: 0.2), value: showCompletionEffect) // Springy pop
         )
         // Add conditional glow for Skip press
         .shadow(
-            color: manager.isRunning && skipButtonScale < 1.0 ? manager.currentMode.color.opacity(0.6) : Color.clear,
+            color: manager.isRunning && skipButtonScale < 1.0 ? settings.color(for: manager.currentMode).opacity(0.6) : Color.clear, // Use settings color
             radius: manager.isRunning && skipButtonScale < 1.0 ? 6 : 0,
             x: 0, y: 2
         )
@@ -152,6 +153,7 @@ struct ResetButtonLabelView: View {
 
 struct ControlButtonsView: View {
     @EnvironmentObject var manager: PomodoroManager
+    @EnvironmentObject var settings: TimerSettings
     // Removed state vars as they are now in ResetButtonLabelView
 
     var body: some View {
@@ -165,7 +167,7 @@ struct ControlButtonsView: View {
                     .font(.subheadline)
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(PomodoroButtonStyle(backgroundColor: manager.currentMode.color))
+            .buttonStyle(PomodoroButtonStyle(backgroundColor: settings.color(for: manager.currentMode)))
             .frame(maxWidth: .infinity, minHeight: 44) // Keep forced height
             
             // Skip/Reset Button - Use the new Label View

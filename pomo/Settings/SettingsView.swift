@@ -331,7 +331,7 @@ struct SettingsView: View {
                         HStack {
                             Text("  \(index + 1).")
                             Image(systemName: step.icon)
-                                .foregroundColor(step.color)
+                                .foregroundColor(settings.color(for: step))
                                 .frame(width: 20)
                             Text(step.rawValue)
                         }
@@ -377,6 +377,13 @@ struct SettingsView: View {
                 iconSettingRow(label: "Pomodoro Icon", iconBinding: $settings.pomodoroIcon)
                 iconSettingRow(label: "Short Break Icon", iconBinding: $settings.shortBreakIcon)
                 iconSettingRow(label: "Long Break Icon", iconBinding: $settings.longBreakIcon)
+                
+                Divider().padding(.leading, 40) // Separator
+                
+                // Custom Color Pickers (New)
+                colorPickerRow(label: "Pomodoro Color", selection: $settings.pomodoroColor)
+                colorPickerRow(label: "Short Break Color", selection: $settings.shortBreakColor)
+                colorPickerRow(label: "Long Break Color", selection: $settings.longBreakColor)
             }
         }
     }
@@ -520,6 +527,18 @@ struct SettingsView: View {
          .padding(.vertical, 8)
          .padding(.horizontal, 12)
      }
+
+    // New: Reusable Color Picker Row
+    private func colorPickerRow(label: String, selection: Binding<Color>) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            ColorPicker("", selection: selection, supportsOpacity: false)
+                .labelsHidden()
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+    }
 }
 
 struct SettingsView_Previews: PreviewProvider {

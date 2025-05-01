@@ -7,6 +7,7 @@ struct ModeIndicatorView: View {
     let currentStepIndex: Int
 
     @EnvironmentObject var manager: PomodoroManager
+    @EnvironmentObject var settings: TimerSettings
 
     @State private var showRoutineDetails = false
     @State private var showFullList = false
@@ -59,14 +60,14 @@ struct ModeIndicatorView: View {
                 VStack(spacing: 4) {
                     HStack(spacing: 8) {
                         Image(systemName: mode.icon)
-                            .foregroundColor(mode.color)
+                            .foregroundColor(settings.color(for: mode))
                         Text(statusText)
                             .font(.headline.weight(.medium))
                             .lineLimit(1)
                     }
                     .padding(.vertical, 8)
                     .padding(.horizontal, 16)
-                    .background(mode.color.opacity(0.1))
+                    .background(settings.color(for: mode).opacity(0.1))
                     .clipShape(Capsule())
                     .scaleEffect(isAnimatingReset ? 1.1 : 1.0)
                     .opacity(isAnimatingReset ? 0.6 : 1.0)
@@ -92,7 +93,7 @@ struct ModeIndicatorView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             Image(systemName: item.step.icon)
-                                .foregroundColor(item.step.color)
+                                .foregroundColor(settings.color(for: item.step))
                             Text(item.step.rawValue)
                                 .font(.caption)
                         }

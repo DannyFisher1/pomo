@@ -22,7 +22,7 @@ struct ContentView: View {
                         RingTimerView(
                             timeRemaining: $manager.timeRemaining,
                             totalTime: manager.originalDuration,
-                            color: manager.currentMode.color
+                            color: settings.color(for: manager.currentMode)
                         )
                     }
 
@@ -53,7 +53,7 @@ struct ContentView: View {
         .background(
             LinearGradient(
                 gradient: Gradient(colors: [
-                    manager.currentMode.color.opacity(0.4),
+                    settings.color(for: manager.currentMode).opacity(0.4),
                     Color(nsColor: NSColor.controlBackgroundColor).opacity(0.2)
                 ]),
                 startPoint: .top,
