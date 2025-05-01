@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import Combine
 
-class StatusBarController {
+class StatusBarController: NSObject {
     private var statusItem: NSStatusItem
     private var popover: NSPopover
     private var manager: PomodoroManager
@@ -10,29 +10,38 @@ class StatusBarController {
     private var updateTimer: Timer?
     private var settingsCancellable: AnyCancellable?
     private var managerModeCancellable: AnyCancellable?
+    private var settingsWindowController: NSWindowController?
+    private var openSettingsObserver: Any?
 
     init(manager: PomodoroManager, settings: TimerSettings) {
+        // 1. Initialize properties specific to this class
         self.manager = manager
         self.settings = settings
+        self.popover = NSPopover()
+        self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        // Optionals (like updateTimer, cancellables, windowController, observer) are implicitly nil
 
-        popover = NSPopover()
+        // 2. Call super.init() AFTER initializing own properties
+        super.init()
+
+        // 3. Now configure properties and call methods that use self
         popover.contentSize = NSSize(width: 360, height: 500)
-        popover.behavior = .transient
+        popover.behavior = .applicationDefined
         popover.contentViewController = NSHostingController(
             rootView: ContentView()
                 .environmentObject(manager)
                 .environmentObject(settings)
         )
 
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        updateStatusIcon()
+        updateStatusIcon() // Okay to call now
         if let button = statusItem.button {
             button.action = #selector(togglePopover(_:))
-            button.target = self
+            button.target = self // Okay to use self now
         }
 
-        startStatusTimer()
-        observeSettingsAndManager()
+        startStatusTimer() // Okay to call now
+        observeSettingsAndManager() // Okay to call now
+        observeNotifications() // Okay to call now
     }
 
     private func observeSettingsAndManager() {
@@ -104,9 +113,65 @@ class StatusBarController {
         }
     }
 
+    private func observeNotifications() {
+        openSettingsObserver = NotificationCenter.default.addObserver(
+            forName: ContentView.openSettingsNotification,
+            object: nil,
+            queue: .main) { [weak self] _ in
+                self?.openSettingsWindow()
+            }
+    }
+
+    @objc func openSettingsWindow() {
+        if settingsWindowController == nil {
+            // … your existing init code …
+            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView()
+                .environmentObject(settings)
+                .frame(minWidth: 360, idealWidth: 380, maxWidth: 400, minHeight: 500)))
+            window.title               = "Pomo Settings"
+            window.styleMask          = [.titled, .closable, .miniaturizable, .resizable]
+            window.level              = .statusBar         // above popovers & floating windows
+            window.isReleasedWhenClosed = false
+            settingsWindowController  = NSWindowController(window: window)
+        }
+
+        guard let window = settingsWindowController?.window,
+              let screen = NSScreen.main?.visibleFrame
+        else {
+            return
+        }
+
+        let margin: CGFloat = 10
+        let w = window.frame.width
+        let h = window.frame.height
+
+        // top-right: x = maxX – width – margin, y = maxY – height – margin
+        let origin = NSPoint(
+          x: screen.minX - w - margin,
+          y: screen.maxY - h - margin
+        )
+
+        window.setFrameOrigin(origin)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+
     deinit {
         updateTimer?.invalidate()
         settingsCancellable?.cancel()
         managerModeCancellable?.cancel()
+        if let observer = openSettingsObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+}
+
+extension StatusBarController: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        if (notification.object as? NSWindow) == settingsWindowController?.window {
+            settingsWindowController = nil
+            print("Settings window closed and controller released.")
+        }
     }
 }

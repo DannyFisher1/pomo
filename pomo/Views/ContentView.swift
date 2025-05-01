@@ -5,7 +5,9 @@ struct ContentView: View {
     @EnvironmentObject var manager: PomodoroManager
     @EnvironmentObject var settings: TimerSettings
     @Environment(\.colorScheme) var systemColorScheme
-    @State private var showSettings = false
+
+    // Define a notification name
+    static let openSettingsNotification = Notification.Name("dev.dannyfisher.pomo.openSettings")
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -46,7 +48,8 @@ struct ContentView: View {
             .padding(.bottom)
             .frame(width: 320, height: 500)
             .overlay(alignment: .topTrailing) {
-                SettingsGearButton(showSettings: $showSettings)
+                // Pass the notification name to the button
+                SettingsGearButton(notificationName: Self.openSettingsNotification)
             }
 
         }
@@ -68,21 +71,18 @@ struct ContentView: View {
                 case .system: return nil
             }
         }())
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
-                .environmentObject(settings)
-                .fixedSize()
-        }
     }
 }
 
 struct SettingsGearButton: View {
-    @Binding var showSettings: Bool
+    // Receive the notification name
+    let notificationName: Notification.Name
     @State private var isHovered = false
 
     var body: some View {
         Button {
-            showSettings.toggle()
+            // Post the notification when clicked
+            NotificationCenter.default.post(name: notificationName, object: nil)
         } label: {
             Image(systemName: "gearshape.fill")
                 .font(.callout)

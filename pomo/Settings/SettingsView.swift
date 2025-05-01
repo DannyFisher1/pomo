@@ -432,9 +432,10 @@ struct SettingsView: View {
         HStack {
             Spacer() // Pushes the button to the right
             Button("Close") {
-                dismiss()
+                // Find the hosting window and close it
+                NSApp.keyWindow?.close()
             }
-            .buttonStyle(.borderedProminent) 
+            .buttonStyle(.borderedProminent)
         }
         .padding()
     }
